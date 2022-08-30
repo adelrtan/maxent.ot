@@ -317,7 +317,16 @@ calculate_aic <- function(model) {
 
 # Helper function that calculates AICc for a single model
 calculate_aic_c <- function(model) {
-  value <- calculate_aic(model) + (2 * model$k^2 + 2 * model$k) / (model$n - model$k - 1)
+
+  # If 3rd term's denominator is -ve
+  if ((model$n - model$k - 1) < 0) {
+    # Replace with 0
+    value <- calculate_aic(model) + (2 * model$k^2 + 2 * model$k) / 0
+  }
+  # Else use actual value for 3rd term's denominator
+  else {
+    value <- calculate_aic(model) + (2 * model$k^2 + 2 * model$k) / (model$n - model$k - 1)
+  }
   return(value)
 }
 
