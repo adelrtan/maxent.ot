@@ -22,22 +22,25 @@ library(ggplot2)    # For plots
 ```
 
 # 1 Overview
-## 1.1 Why a Maximum Entropy (MaxEnt) model?
+## 1.1 Why use the Maximum Entropy (MaxEnt) model?
 Optimality Theory (OT) (Prince & Smolensky 1993) is one of the leading theories in phonology, and is a very successful model of categorical language data.
 In OT, ranked constraints pick a single winning surface representation (SR) for each underlying representation (UR).
 Nevertheless, a large proportion of language data is probabilistic. 
 Moreover, psycholinguistic experiments (*e.g.* artificial language learning) often produce probabilistic results too.
-Thus, multiple models (Stochastic OT (Boersma 1997), Partial Ordering OT (Antilla 1997), Harmonic Grammar (Legendre, Miyata & Smolensky 1990), among others) have been put forward to augment the basic structure of OT, to allow the modeling of probabilistic data.
+Thus, multiple models (*e.g.* Stochastic OT (Boersma 1997), Partial Ordering OT (Antilla 1997), Harmonic Grammar (Legendre, Miyata & Smolensky 1990), among others) have been put forward to augment the basic structure of OT, in order to model probabilistic data.
 MaxEnt (Goldwater & Johnson 2003) is a one such model. 
-It works to maximize the likelihood of data by adjusting constraint weights.
+In MaxEnt, constraint weights are adjusted in order to maximize the likelihood of data.
 One benefit of MaxEnt over other probabilistic models is that the mathematics behind it are well understood and convergence proofs for learning are available (Berger *et al.* 1996).
 
-The maxent.ot package implements the MaxEnt model.
+The `maxent.ot` package implements the MaxEnt model.
 There are three functions in this package:
 
 * `optimize_weights()`: Optimizes weights given a data set & optional biases.
 * `predict_probabilities()`: Predict probabilities of candidates based on their violation profiles & constraint weights.
 * `compare_models()`: Compares two or more model fits to the same data set to determine which provides the best fit, using variety of methods.
+
+## 1.2 OT: A quick recap
+We now present a quick recap of OT in order to illustrate how OT and MaxEnt differ in choosing among outputs ([eval]{.smallcaps}) given the same data set (same [con]{.smallcaps} \& [gen]{.smallcaps}).
 
 In OT, ranked constraints choose one winning SR candidate per UR.
 Consider the OT tableaux below (*Figure 1*).
@@ -47,51 +50,49 @@ knitr::include_graphics("../man/figures/OT_tableau.JPG")
 ```
 
 For the UR /ur-1/, Con1 prefers [sr1-1] while Con2 prefers [sr1-2].
-Since Con1 outranks Con2, [sr1-1] is the sole winner.
-Hence [sr1-1] is the sole winner, and is predicted to be the only SR for this particular UR (*i.e.* a categorical outcome).
-By the very same logic, the SR [sr2-1] is the sole realization of the UR /ur-2/ (*i.e.* Con1 prefers [sr2-1]).
-Notice that Con2 plays no role in deciding the outcome. 
+Since Con1 outranks Con2, [sr1-1] is the sole winner, and is predicted to be the only SR for this particular UR (*i.e.* a categorical outcome).
+By the very same logic, the SR [sr2-1] is the sole realization of the UR /ur-2/ (*i.e.* Con1 prefers [sr2-1] to [sr2-2]).
+Notice that Con2 plays no role in deciding the outcome (hence the shading). 
 
-## 1.2 The MaxEnt model defined
+## 1.3 The MaxEnt model defined
 In contrast, MaxEnt produces probabilistic outcomes.
 In MaxEnt, constraints have weights (rather than being ranked with respect to each other).
-The predicted probability of an SR candidate given its UR depends on the weights of the constraints, calculated according to the following formula:
+The predicted probability of an SR candidate given its UR depends on the weights of the constraints, and is calculated according to the following formula:
 
-$P(SR_i|UR_i; w) = \frac{1}{Z_w(UR_i)} exp(- \Sigma_{k=1}^mw_k f_k(SR_i, UR_i))$
+$$P(SR_i|UR_i; w) = \frac{1}{Z_w(UR_i)} exp(- \Sigma_{k=1}^mw_k f_k(SR_i, UR_i))$$
 
-where $f_k(SR_i, UR_i)$ is the number of violations of constraint $k$ incurred by mapping underlying $UR_i$ to surface $SR_i$, $Z_w(UR_i)$ is a normalization term defined as 
+where $f_k(SR_i, UR_i)$ is the number of violations of constraint $k$ incurred by mapping underlying $UR_i$ to surface $SR_i$, and $Z_w(UR_i)$ is a normalization term defined as 
 
-$Z(UR_i) = \Sigma_{y\in \mathcal{Y}(UR_i)} exp(- \Sigma_{k=1}^m w_k f_k(SR, UR_i))$
+$$Z(UR_i) = \Sigma_{y\in \mathcal{Y}(UR_i)} exp(- \Sigma_{k=1}^m w_k f_k(SR, UR_i))$$
 
-where $y \in \mathcal{Y}(UR_i)$ is the set of observed surface realizations of input $UR_i$.
+where $y \in \mathcal{Y}(UR_i)$ is the set of surface realizations of input $UR_i$.
 
-To better understand how these formulas are applied, we'll walk through the MaxEnt tableaux in *Figure 2*.
+We'll walk through the MaxEnt tableaux in *Figure 2* to illustrate how these formulas are applied.
 
 ```{r, echo=FALSE, fig.cap="Fig 2: Two MaxEnt tableaux.", out.width = '85%'}
-knitr::include_graphics("../man/figures/maxEnt_tableau_2.JPG")
+knitr::include_graphics("../man/figures/maxEnt_tableau_3.JPG")
 ```
 
-
-## 1.3 Calculating MaxEnt probabilities: Step-by-step
-Notice that this MaxEnt tableau has the same URs, SRs, constraints, and constraint violation profiles as the OT tableaux above.
+## 1.4 Calculating MaxEnt probabilities: Step-by-step
+Notice that these two MaxEnt tableaux have the same URs, SRs, constraints, and constraint violation profiles as the two OT tableaux above.
 However, instead of being ranked, these constraints now have weights (*e.g.* Con1 weight = 1.6; Con2 weight = 0.8).
-There are also four additional columns tagged on to the right of the tableaux, which will be used to illustrate how the predicted probabilities are computed.
+There are also four additional columns tagged on to the right of the tableaux, which we use to illustrate how the predicted probabilities are computed.
 
 An important variable that shows up in the formulas above is: $f_k(SR, UR_i)$. 
 This refers to the constraint violation profile for a single UR-SR pair (yellow box).
 
-To get the penalty for each UR-SR pair, we take the weighted sum of its constraint violations.
+Next, we move on to the penalty.
+Penalty has also been called "harmony" in other descriptions of the MaxEnt model.
+To calculate the penalty for each UR-SR pair, we take the weighted sum of its constraint violations.
 For example, the UR-SR pair $<$/ur-2/, [sr2-2]$>$ picks up 1 violation of Con1 and another violation of Con2.
-The weight sum (green box) is thus: 
+The weight sum (green box) is thus 
 
-$weight_{Con1} \times 1 + weight_{Con2} \times 2 = 1.6 \times 1 + 0.8 \times 2 = 3.2$ 
+$$weight_{Con1} \times 1 + weight_{Con2} \times 2 = 1.6 \times 1 + 0.8 \times 2 = 3.2$$ 
 
-The penalty for other SRs are similarly calculated.
-For example, the penalty for [sr2-1] is 
+The penalty for other UR-SR pairs are similarly calculated.
+For example, the penalty for the UR-SR pair $<$/ur-2/, [sr2-1]$>$ is 
 
-$weight_{Con1} \times 0 + weight_{Con2} \times 1 = 1.6 \times 0 + 0.8 \times 1 = 0.8$
-
-The penalty has also been known as the "harmony". 
+$$weight_{Con1} \times 0 + weight_{Con2} \times 1 = 1.6 \times 0 + 0.8 \times 1 = 0.8$$
 
 The next column gives the value of $e^{-penalty}$.
 The Reader may have also encountered this term being called the "MaxEnt score" or the "potential" in other descriptions of MaxEnt.
@@ -99,38 +100,59 @@ The Reader may have also encountered this term being called the "MaxEnt score" o
 We then need to normalize the MaxEnt score in order to get probabilities.
 The next column provides the $Z$ value for each UR. 
 $Z$ is short for Zustandssumme, "sum over states", and has also been known as the normalization constant, or the canonical partition function.
-$Z$ allows the MaxEnt scores of all SRs arising from a single UR to be normalized.
+$Z$ is the sum of the MaxEnt scores of all SRs arising from a particular UR.
 For example, $Z($ur-2$)$ is the sum of the MaxEnt scores of all SRs of /ur-2/ (blue box).
 
 The predicted probability is shown in the final column.
 The probability of a particular SR for a given UR is its MaxEnt score divided by the normalization constant, $Z$.
 For example, the probability of [sr2-2] given /ur-2/ (magenta box) is 
 
-$P($sr2-2$|$ur-2$) = \frac{0.449}{0.490}$
+$$P(\text{sr2-2}|\text{ur-2}) = \frac{0.449}{0.490}$$
 
 Congratulations!
 You now know how to calculate the probabilities of an SR given its UR when provided with constraint weights.
 Next, we'll discuss some characteristics of the probability distribution and of the penalty score.
 
-## 1.4 Characteristics of the MaxEnt model
+## 1.5 Characteristics of the MaxEnt model
 The probability distribution defined by the first equation above is also known as the Boltzmann distribution or the Gibbs distribution.
 Like the Boltzmann distribution, the probability of a particular SR given the UR it arises from is a function of two variables: (1) its penalty and (2) temperature.
 
-**As a particular SR's penalty increases, its probability decreases.**
-The graph below shows how the MaxEnt score varies with penalty.
-TODO: INSERT GRAPH HERE!!!
-Recall that the probability of *SR~i~* given its UR, *UR~i~*, is directly proportional to its MaxEnt score:
+**As a particular SR's penalty increases, its probability decreases** (assuming everything else remains unchanged).
+The graph below visualizes how a MaxEnt score varies with penalty (*Figure 3*).
+(Note: It is not possible to graph how probability varies with penalty, since the actual probability depends on the penalties of the other SRs arising from the same UR, so we'll use the MaxEnt score as an intermediary.)
 
-$P(SR_i|UR_i) \propto M_{UR_i, SR_i}$
+``` {r, echo=FALSE, fig.cap="Fig 3: How MaxEnt score varies with penalty.", out.width = '85%'}
+knitr::include_graphics("../man/figures/MaxEnt_vs_penalty.jpg")
+```
+
+``` {r, include=FALSE}
+# This creates the .jpg image for the graph in the chunk above.
+# Ideally, use this (i.e. create graph rather than use an image)...
+# ...but this currently renders small plot & ugly big spaces for labels
+
+curve(exp(-x), from=0, to=5,
+      col="white", xlab="penalty", ylab="MaxEnt score")    # Hack to set up window
+
+# Add horizontal & vertical lines at y=0 & x=0
+abline(h=0, col="gray")
+abline(v=0, col="gray")
+
+curve(exp(-x), from=0, to=5.25, col="blue", add=TRUE)      # Extend curve to to R-edge of window
+```
+
+Recall that the probability of an SR given its UR is directly proportional to its MaxEnt score:
+
+$$P(SR_i|UR_i) \propto M_{UR_i, SR_i}$$
 
 where $M_{UR_i, SR_i}$ is the MaxEnt score of the UR-SR pair $<$*UR~i~*, *SR~i~*$>$.
 We know this because 
 
-$P(SR_i|UR_i) = \frac{1}{Z(UR_i)} M_{UR_i, SR_i}$.
+$$P(SR_i|UR_i) = M_{UR_i, SR_i} \times \frac{1}{Z(UR_i)}$$
 
-Hence, the relationship between penalty and probability is clear even though the graph shows the MaxEnt score in place of probability.
+Hence, the relationship between penalty and probability is clear (though the graph shows the MaxEnt score in place of probability).
 
-The graph also shows that SR candidates with infinitely high penalties still receive a MaxEnt score greater than zero.
+The graph also indicates that as penalty increases, the MaxEnt score approaches but never quite reaches 0.
+Thus, SR candidates with infinitely high penalties still receive a MaxEnt score greater than zero.
 This means that, theoretically, such SRs will receive some probability.
 Nevertheless, the probabilities that such SRs receive will be so tiny that they can be treated as not occurring. 
 This is useful when using MaxEnt to model a data set that has a mix of categorical and probabilistic phenomena.
@@ -138,13 +160,12 @@ For categorical phenomena, the predicted probability that is returned will often
 Such outcomes can be treated as essentially categorical, so **MaxEnt is also capable of modeling categorical data** despite being a probabilistic model.
 
 Temperature is rarely used when modeling linguistic data, so the current simplified formula we've introduced above will do for now. 
-We will introduce the final formulation of the probability distribution when we discuss the `predict_probabilities()` function, where it turns out that temperature can be a useful tool in **adjusting model fit to particular psycholinguistic tasks**.
-Since we ignore temperature for now, the current formulation of the MaxEnt model is in fact an instance of a log-linear model. 
+We will introduce the final formulation of the probability distribution in &sect;5 when we discuss the `temperature` argument of the `predict_probabilities()` function. It turns out that temperature can be a useful tool in **adjusting model fit to particular psycholinguistic tasks**.
 
 An additional feature of the MaxEnt model arises from how the penalty score is calculated.
 Because each violation contributes to the penalty score, multiple violations of a lower-weighted constraint can work together to make an SR less probable than another SR that has only one violation of a higher-wighted constraint.
 This phenomenon is called the **"gang-up" effect**.
-It has been observed in phonological phenomena, and has also been reported experimentally (Breiss 2020). 
+This effect has been observed in phonological phenomena, and has also been reported experimentally (Breiss 2020). 
 
 
 # 2 Fitting the model (basic): `optimize_weights()`
@@ -169,12 +190,13 @@ The columns are organized as follows:
 * Column 2: Output (surface representation)
 * Column 3: Frequency
   + Both token counts & relative frequency can be used for the function `optimize_weights`.
-  + Token counts are recommended if user intends to use the function `compare_models` down the line to compare multiple trained models. In particular, relative frequency won't work with the `aic_c` & `bic` methods of `compare_models`.
+  + Token counts are recommended if the User intends to use the function `compare_models` down the line to compare multiple trained models. In particular, relative frequency won't work with the `aic_c` & `bic` methods of `compare_models`.
 * Column 4 onwards: Constraints
   + Each constraint takes up one column. 
 
 The first & second rows are only used for Column 4 onwards (*i.e.* constraints).
 Full constraint names are in the first row, while their shortened names are in the second. 
+Tableaux are inserted from the third row onwards.
 
 The data set is a tab-delimited `.txt` file.
 The Reader may notice that the input file is in fact prepared in an OTSoft-style format (Hayes, Tesar & Zuraw 2003).
@@ -201,8 +223,8 @@ The object `simple_model` has 4 relevant named attributes:
   * `k`: the number of constraints
   * `n`: the number of data points in the training set
 
-## 2.2.1 Pulling up specific model attributes 
-We can pull up any specific model attribute that we'd like.   
+## 2.2.1 Retrieving specific model attributes 
+We can retrieve any specific model attribute that we'd like.   
 For example, if we'd like to see only the learned constraint weights for `simple_model`, we can pull them up as follows:
 ```{r simpleModelWeight}
 # Get learned weights of model we've fit (no biases used)
@@ -211,7 +233,7 @@ simple_model$weights
 
 Here we see that the trained model happened to learn the same weight (14.2) for both Constraint1 and Constraint2.
 
-Likewise, we can pull up any other model attribute. For example, here's the log likelihood:
+Likewise, we can retrieve any other model attribute. For example, here's the log likelihood:
 
 ```{r simpleModelLL}
 # Get log likelihood of model we've fit (no biases used)
@@ -219,61 +241,99 @@ simple_model$loglik
 ```
 
 This log likelihood is, in fact, at ceiling (at the maximum possible likelihood), which is indicative of overfitting.
-The issue of overfitting and the introduction of priors to reduce it will be taken up in $\S3.3$.
+The issue of overfitting and the introduction of priors to reduce overfitting will be taken up in &sect;3.3.
 But first, let's gain a better understanding of how log likelihood guides training.
 
 
 ## 2.3 Fitting the model to data: Explained
+### 2.3.1 Defining log likelihood
 By default, the `optimize_weights()` function maximizes the log likelihood of the training data by changing the constraint weights.
-The log likelhood of the training data is:
+The log likelihood of the training data is:
 
-$LL_w(D) = \Sigma_{i=1}^n ln P(y_i|x_i; w) - \Sigma_{k=1}^m \frac{(w_k - \mu_k)^2}{2\sigma_k^2}$
+$$LL_w(D) = \Sigma_{i=1}^n ln P(y_i|x_i; w) - \Sigma_{k=1}^m \frac{(w_k - \mu_k)^2}{2\sigma_k^2}$$
 
-where $LL_w(D)$ is the log likelihood of the training data, $D$ is the training data, and $w$ is the vector of constraint weights.
-In other words, the values of each of the elements of $w$ (*i.e* each individual constraint) are the only variables available for the model to adjust. 
-For now, we'll ignore the second term (the bias term).
+Let's unpack the terms of this equation. On the left-hand side, we have $LL_w(D)$, where
 
-#### What guides the weight changes?
-Recall that the learner takes in a distribution over training examples $D$ (the first three columns of the table below).
+* $LL_w(D)$ is the log likelihood of the training data $D$ under weights $w$
+* $D$ is the training data
+* $w$ is the vector of constraint weights
 
-|Input|Output|Freq|Observed P(Output\|Input)|M1|M2|
-|:---|---|---:|---:|---:|---:|
-|Input1|Output1-1|1|.5|.5|.25|
-||Output1-2|1|.5|.5|.75|
-|Input2|Output2-1|1|1|1|.5|
-||Output2-2|0|0|0|.5|
-|logLike||||-1.386|-2.367|
+For the first term of the right-hand side:
 
-The learner's goal is to maximize the log likelihood of this data by producing a distribution over these three training examples that matches the observed distribution as closely as possible. 
+* $n$ is the number of observed data points
+  + *i.e.* the sum of the frequency column in the input
+* $y_i$ is the observed surface form of the $i^{th}$ data point, and $x_i$ is the input form that $y_i$ arose from
+* $P(y_i|x_i; w)$ is the probability of realizing underlying $x_i$ as surface $y_i$ under the weights $w$
+
+In other words, the value of each of the elements of $w$ (*i.e.* the weight of each individual constraint) is the only variable available for the model to adjust. 
+For now, we'll ignore the second term on the right-hand side of the equation (the bias term).
+
+### 2.3.2  What guides the weight changes?: Maximizing log likelihood
+Recall that the learner takes in a distribution over training examples, $D$.
+For the data set we've been using, $D$ is: $<$Input1, Output1-1$>$: 1, $<$Input1, Output1-2$>$: 1, $<$Input2, Output2-1$>$: 1.  
+$<$Input2, Output2-2$>$ is not part of $D$ because it isn't observed.
+
+The learner's goal is to maximize the log likelihood of $D$.
+In other words, the learner seeks to produce a distribution over these three training examples that matches the observed distribution as closely as possible. 
 The learner adjusts the weights with this goal in mind.
-Let's imagine we have two trained models *M1* & *M2*, whose predicted distributions P(output|input) over the training examples are shown in the final two columns of the table above.
-For ease of comparison, the observed relative frequencies are shown in the column P(Output|Input).
-Log likelihoods may range from negative infinity to 0, with higher log likelihoods being better.
 
-$logLike_{M1} = ln(.5) + ln(.5) + ln(1) = -1.386$
+```{r, echo=FALSE, fig.cap="Table 1: Log likelihood of data under weights of M1 & M2.", out.width = '85%'}
+knitr::include_graphics("../man/figures/logLike_table.jpg")
+```
 
-$logLike_{M2} = ln(.25) + ln(.75) + ln(1) = -2.367$
+<!-- |Input|Output|Freq|Observed P(Output\|Input)|M1|M2| -->
+<!-- |:---|---|---:|---:|---:|---:| -->
+<!-- |Input1|Output1-1|1|.5|.5|.25| -->
+<!-- ||Output1-2|1|.5|.5|.75| -->
+<!-- |Input2|Output2-1|1|1|1|.5| -->
+<!-- ||Output2-2|0|0|0|.5| -->
+<!-- |logLike||||-1.386|-2.367| -->
 
-The log likelihood of *M1* is higher because its predicted distribution over observed data points is closer to that of the observed distribution.
+Let's imagine we have two models, *M1* & *M2*, whose weights (whatever they may be) produce the predicted distributions P(output|input) shown in the final two columns of *Table 1*.
+For ease of comparison, the observed relative frequencies are shown in the third-to-last column.
+Right away, we can see that *M1* matches the observed distribution much better than *M2* does.
+In other words, the observed data are more likely to occur under the weights of *M1* than they are to occur under the weights of *M2*.
+Though we haven't yet applied the equation above to calculate the log likelihood of the data under the weights of these two models, we can expect that *M1* will produce a higher log likelihood than *M2*.
+
+Now we'll apply the log likelihood equation to calculate the log likelihood of the data under the weights of *M1* \& *M2*. 
+Log likelihoods may range from negative infinity to 0, with higher log likelihoods indicating that a model's weights produce a better fit to the observed data.
+Here's the log likelihood equation again (bias term removed since we're not using biases here):
+
+$$LL_w(D) = \Sigma_{i=1}^n ln P(y_i|x_i; w)$$
+
+Applying the equation to *M1* ($w_{M1}$ refers to *M1*'s weights): 
+$$LL_{w_{M1}}(D) = ln(.5) + ln(.5) + ln(1) = -1.386$$
+Applying the equation to *M2* ($w_{M2}$ refers to *M2*'s weights): 
+$$LL_{{w_{M2}}}(D) = ln(.25) + ln(.75) + ln(1) = -2.367$$
+
+The log likelihood of the observed data, $D$, is higher under the weights of *M1* than it is under the weights of *M2*.
+This is because *M1*'s weights produce a predicted distribution over observed UR-SR pairs that is closer to the observed distribution than *M2*'s weights do.
 (Notice that only observed data are included in the calculations above.
 Despite Output2-2 getting 50\% of the predicted probability in *M2*, it does not contribute to the log likelihood.)
 
 Hence, the learner's objective is to maximize the log likelihood of the data; that is, finding weights that produce a predicted distribution that is as close to the observed one as possible.
 
 
+%%TODO: It's been awkward calling the full formulation of the objective function (which also includes the bias in addition to LL) "log likelihood". Since really only the first term is the log likelihood. Do we want find a more accurate name for the term we're maximizing? Maybe "loss"? Or maybe just "objective function"? I've used the term cost elsewhere to describe the "cost" of picking certain constraint weights that differ from a preferred value if we've decided beforehand that this constraint's weight should be a particular preferred value, so maybe avoid "cost".
+
+
+### 2.3.3 The learning algorithm
+%%TODO: Do we want to explain the learning algo? L-BFGS? Or is this an overkill? Maybe just some light hill-climbing without the L-BFGS (though the package actually implements L-BFGS-B)?
+
+
 # 3 Fitting the model with priors: `optimize_weights()`
 
 Here's the general formula for log likelihood, repeated here for ease of reference:
 
-$LL_w(D) = \Sigma_{i=1}^n ln P(y_i|x_i; w) - \Sigma_{k=1}^m \frac{(w_k - \mu_k)^2}{2\sigma_k^2}$
+$$LL_w(D) = \Sigma_{i=1}^n ln P(y_i|x_i; w) - \Sigma_{k=1}^m \frac{(w_k - \mu_k)^2}{2\sigma_k^2}$$
 
-In the previous section ($\S2$), we ignored the second term, so log likelihood depended only upon the likelihood of the training data under the current weights.
+In the previous section (&sect;2), we ignored the second term, so log likelihood depended only upon the likelihood of the training data under the current weights.
 In this section, we'll make use of the second term.
 This term is also known by several names such as the "bias term", the "prior", and in special cases, the "regularization term".
-The bias term allows us to nudge the learner towards particular weights by introducing an added cost for weights that differ from the ones that the user specifies.
+The bias term allows us to nudge the learner towards particular weights by introducing an added cost for weights that differ from the ones that the User specifies.
 
 Some use cases for the bias term include using the bias term as simple regularization to avoid overfitting (Goldwater & Johnson 2003), and the modeling of proposed phonological learning biases (Wilson 2006, White 2013, Mayer 2021, among others).
-Worked examples using the bias term for regularization and for modeling learning biases are provided in $\S3.3$ and $\S3.4$ respectively.
+Worked examples using the bias term for regularization and for modeling learning biases are provided in &sect;3.3 and &sect;3.4 respectively.
 
 ## 3.1 Unpacking the math behind the bias term
 The bias term has three variables: $w_k$, $\mu_k$ and $\sigma_k$.
@@ -333,7 +393,7 @@ The bias file is a tab-delimited `.txt` file.
 Constraints appear in the rows.
 The first column specifies the ideal weight, $\mu$, and the second column specifies the tolerance for weight discrepancy, $\sigma$. 
 In the example above, both constraints happen to have the same values for $\mu$.
-However, if the user so wishes, they may specify different values of $\mu$ for different constraints. 
+However, if the User so wishes, they may specify different values of $\mu$ for different constraints. 
 The same applies to $\sigma$.
 Below, we fit weights with the biases specified in a file.
 
@@ -375,15 +435,15 @@ optimize_weights(
 ```
 
 Any combination of arguments can be used to specify the bias parameters.
-The user, however, is advised that when multiple values for the same parameter is specified, the algorithm decides which one to use according to the chart in *Figure 3*.
+The User, however, is advised that when multiple values for the same parameter is specified, the algorithm decides which one to use according to the chart in *Figure 4*.
 
-```{r, echo=FALSE, fig.cap="Fig 3: Hierarchy for choosing which bias parameters to use when conflicts arise. Parent over-writes child.", out.width = '25%'}
+```{r, echo=FALSE, fig.cap="Fig 4: Hierarchy for choosing which bias parameters to use when conflicts arise. Parent over-writes child.", out.width = '25%'}
 knitr::include_graphics("../man/figures/bias_param_hierarchy.png")
 ```
 
 In this chart, the argument above takes precedence over the one(s) it dominates.
-For example, if the user passes in both a file for `bias_file` and a separate value for `mu_scalar`, the parameter values specified in `bias_file` will be used and the one specified in `mu_scalar` will be ignored. 
-Likewise, if the user passes in both a vector for `sigma_vector` and another value for `sigma_scalar`, the vector for `sigma_vector` will be used and the value for `sigma_scalar` will be ignored.
+For example, if the User passes in both a file for `bias_file` and a separate value for `mu_scalar`, the parameter values specified in `bias_file` will be used and the one specified in `mu_scalar` will be ignored. 
+Likewise, if the User passes in both a vector for `sigma_vector` and another value for `sigma_scalar`, the vector for `sigma_vector` will be used and the value for `sigma_scalar` will be ignored.
 
 If only one of the two bias parameters is present, an error will be raised.
 (*e.g.* When values are provided for $\mu$, but there are none for $\sigma$.)
@@ -441,7 +501,7 @@ Inspecting the trained model, we now see a value for the attribute `bias_params`
 muS_sigS_bias_model
 ```
 
-We can pull up this attribute alone:
+We can retrieve this attribute alone:
 ```{r}
 # Take a look at the bias parameters we used during model training
 muS_sigS_bias_model$bias_params
@@ -466,7 +526,7 @@ We also see that the log likelihood of this model is lower than ceiling ($-2.000
 muS_sigS_bias_model$loglik
 ```
 
-#### Pulling out the weight for 1 constraint
+#### Retrieving the weight for 1 constraint
 Let's imagine that we're only interested in a tracking the weight of a subset of the constraints.
 For example, we're interested only in Constraint 1, and want to track the weight learned for this constraint in the unbiased and the simple bias (regularized) model.
 We use index `1` to pick out the first constraint in the named list `your_model_name$weights`.
@@ -574,7 +634,7 @@ Notice how both these phases (training and response) reflect the experimental se
 
 We'll need a new test file that includes the observed frequencies for both the test (p&rarr;v) and extension (b&rarr;v) alternations.
 We'll pass both the models trained above as well as the new test file to the function `predict_probabilities()`.
-We'll take a closer look at both the function `predict_probabilities()`, and the structure of the test file in $\S4$ below.
+We'll take a closer look at both the function `predict_probabilities()`, and the structure of the test file in &sect;4 below.
 For now, we'll just focus our attention on the predicted probability calculated by this function.
 
 ```{r}
@@ -755,16 +815,16 @@ However, the resulting `Error` from both data sets differ.
 Interpreting the `Error` for `data_file_a` is straightforward, while the `Error` for `data_file_b` is uninterpretable.
 (*e.g.* Regarding `data_file_b`, what does it mean when the the first instance of *Output1-2* has a 25% overprediction error?)
 
-For this reason, it is strongly recommended to check one's data set for duplicate URs, in order to collapse duplicate URs to a single UR if the user desires to make use of the `Error` values.
+For this reason, it is strongly recommended to check one's data set for duplicate URs, in order to collapse duplicate URs to a single UR if the User desires to make use of the `Error` values.
 Alternatively, one could engage in post-hoc data wrangling to achieve interpretable error values if the uncollapsed data set is otherwise desired.
 
-## 4.2 Get predictions with user-chosen weights
+## 4.2 Get predictions with User-chosen weights
 Let's imagine that we're curious about how particular weights would perform with our data set.
 Perhaps we've seen these weights reported in a paper and we'll like to try them out.
 Below, we demonstrate how to prepare these weights so that they'll be compatible with `predict_probabilities()`.
 
 ``` {r}
-# Get predictions with user-chosen constraint weights
+# Get predictions with User-chosen constraint weights
 # Make a list of weights
 # Be sure to order them in exactly the same order in which they appear in the input file!
 my_wt_ls <- list(1.5, 2.5)
@@ -778,20 +838,20 @@ predict_probabilities(data_file_a, my_wts)
 
 # 5 The full MaxEnt model: With Temperature
 ## 5.1 The full MaxEnt model defined
-As promised, we now present the generalized version of the model with temperature included. 
+As promised, we now present the generalized version of the model with temperature included: 
 
-$P(SR_i|UR_i; w) = \frac{1}{Z_w(UR_i)} exp(- \Sigma_{k=1}^m \frac{w_k f_k(SR_i, UR_i)}{T})$
+$$P(SR_i|UR_i; w) = \frac{1}{Z_w(UR_i)} exp(- \Sigma_{k=1}^m \frac{w_k f_k(SR_i, UR_i)}{T})$$
 
 where $T$ is the new variable temperature.
 As before, $f_k(SR_i, UR_i)$ is the number of violations of constraint $k$ incurred by mapping underlying $UR_i$ to surface $SR_i$, $Z_w(UR_i)$ is a normalization term defined as 
 
-$Z(UR_i) = \Sigma_{y\in \mathcal{Y}(UR_i)} exp(- \Sigma_{k=1}^m \frac{w_k f_k(SR, UR_i)}{T})$
+$$Z(UR_i) = \Sigma_{y\in \mathcal{Y}(UR_i)} exp(- \Sigma_{k=1}^m \frac{w_k f_k(SR, UR_i)}{T})$$
 
-Temperature is a variable whose value the user may adjust only in the `predict_probabilities()` function.
-When using `predict_probabilities()`, if the user doesn't specify a temperature, the value for temperature defaults to 1.
-Similarly for `optimize_weights()`, where there is no argument available for the user to specify temperature, the temperature can be assumed to be 1.
+Temperature is a variable whose value the User may adjust only in the `predict_probabilities()` function.
+When using `predict_probabilities()`, if the User doesn't specify a temperature, the value for temperature defaults to 1.
+Similarly for `optimize_weights()`, where there is no argument available for the User to specify temperature, the temperature can be assumed to be 1.
 Thus, all the cases that we've encountered in the preceding sections when we applied `predict_probabilities()` or `optimize_weights()` can be assumed to have $T=1$, since we haven't used the argument `temperature` yet.
-Notice that when $T=1$, the generalized model is equivalent to the simplified one defined in $\S1.2$.
+Notice that when $T=1$, the generalized model is equivalent to the simplified one defined in &sect;1.3.
 
 ## 5.2 The effect of temperature on probability
 **As temperature increases, the probability distribution becomes less polarized.**
@@ -899,7 +959,7 @@ Possible explanations have been put forth such as: selecting a choice that one w
 
 Regardless of why this occurs, being able to model depolarization is crucial when one wishes to ask questions that encompass both the lexicon and psycholinguistic experimental results. 
 In one such work, Hayes, Zuraw, Siptar & Londe (2009) (henceforth HZSL) asked whether certain types of constraints were under- or over-learned based on participant responses to a wug test, given the lexicon.
-In what follows, we walk the reader through a replication of HZSL (2009) to demonstrate how temperature can be utilized to make lexicon-based models and models trained on human subject responses comparable.
+In what follows, we walk the Reader through a replication of HZSL (2009) to demonstrate how temperature can be utilized to make lexicon-based models and models trained on human subject responses comparable.
 
 ### 5.3.1 Hungarian backness harmony
 In Hungarian, the dative suffix has two allomorphs: [-nok] and [-nek].
@@ -974,7 +1034,7 @@ To generate the probability distribution over the suffixes of a given stem, we w
 * We'll set $T>1$ to capture the depolarization effect for 2AFC tasks. 
   + Following HZSL, we'll specifically use $T=1.5$. See HZSL (2009) for more detail on why they chose this value.
 
-``` {r}
+``` {r, eval=FALSE}
 # Get paths to sample Hungarian wug data
 hu_data <- system.file("extdata", "sample_hu_wug.txt", package = "maxent.ot")
 
@@ -1020,7 +1080,7 @@ It returns a dataframe with $m$ rows and $n$ columns, where $m$ is the number of
 
 We present the constraint weights obtained by fitting each of the 500 simulated wug test below.
 
-``` {r}
+``` {r, eval=FALSE}
 # Get path to the constraint weights trained on each of the 500 simulated wug tests
 hu_500simul_wts_path <- system.file("extdata", "hu_500simuls_wts.txt", package = "maxent.ot")
 
@@ -1040,9 +1100,9 @@ head(hu_500simul_wts)
 ```
 
 The process took a long time to run so we performed only 500 (rather than 10,000) simulations.
-The reader is invited to uncomment the code below if they would like to try running the `monte_carlo_weights()` function. 
+The Reader is invited to uncomment the code below if they would like to try running the `monte_carlo_weights()` function. 
 
-``` {r}
+``` {r, eval=FALSE}
 # Learn weights for 5 simulated wug tests
 # hu_simul_wts <- monte_carlo_weights(hu_pred, 5)
 ```
@@ -1051,12 +1111,12 @@ Notice that duplicate UR entries are present in the prediction object `hu_pred`.
 This is because the set-up of the `monte_carlo_weights()` function crucially depends upon predicted P(SR|trial) in order to randomly give one SR in each trial a frequency of 1.
 Consecutive rows are considered to belong to the same trial if they have the same UR, but not a repeated SR.
 When creating your prediction object, it is important to ensure that trials are not collapsed into a single entry.
-The caution against duplicate UR entries highlighted in $\S4.1$ doesn't apply here because the `Error` column of the `hu_pred` file isn't used by `monte_carlo_weights()`. 
+The caution against duplicate UR entries highlighted in &sect;4.1 doesn't apply here because the `Error` column of the `hu_pred` file isn't used by `monte_carlo_weights()`. 
 
 ### 5.3.6 Are unnatural constraints under-learned?
 Now that we have a distribution of expected constraint weights for each of the 10 constraints, let's find out whether the weights trained on human wug responses were under-, over-, or perfectly learned.
 
-``` {r}
+``` {r, eval=FALSE}
 # Fit model for human wug response
 human_wug_model <- optimize_weights(hu_data)
 
@@ -1077,7 +1137,7 @@ For example, USE_FRONT/bilabial__ has a lower weight when trained on human wug r
 
 The plots below visualize where the human wug trained weights (blue vertical dashed line) fall in relation to the distribution of the simulated idealized wug trained weights (histogram).
 
-``` {r, echo=FALSE}
+``` {r, eval=FALSE}
 library(ggplot2)
 
 # Plot weights for the five unnatural constraints by looping through them
@@ -1205,7 +1265,7 @@ The model with fewer parameters is the better one.
 ### 6.1.2 Likelihood ratio test: Explained
 The likelihood ratio is calculated as follows:
 
-$LR = 2(LL_2 - LL_1)$
+$$LR = 2(LL_2 - LL_1)$$
 
 where $LL_2$ is the log likelihood of the larger model (the one with more constraints) and $LL_1$ is the log likelihood of the smaller model.
 
@@ -1222,21 +1282,11 @@ Mathematically, this translates to having a negative $X^2$-value, which is unint
 An error message will be produced and no $X^2$-test will be performed if such a scenario is encountered.
 
 
-``` {r include=FALSE}
-# TO REMOVE: here just for troubleshooting
-large_model$loglik
-small_model$loglik
-
-2*(large_model$loglik - small_model$loglik)
-```
-
-
 ## 6.2 Akaike Information Criterion (AIC)
 ### 6.2.1 AIC: Background
 The AIC value for a particular model is calculated as follows:
 
-$AIC = 2k - 2LL$
-
+$$AIC = 2k - 2LL$$
 
 A smaller AIC score indicates a better model.
 Both the number of model parameters and log likelihood contribute to the AIC score. 
@@ -1270,13 +1320,13 @@ The column `aic.wt` gives the probability that the current model is the best one
 In order to calcualte the `aic.wt` for a model, each model's AIC score has to be converted to a raw AIC weight, $r$. 
 The `aic.wt` for a current model, $w_{aic}$, is just its raw AIC weight normalized over the sum of raw AIC weights of all other models that were passed in. 
 
-$w_{aic} = \frac{r}{\sum_{r \in R} r}$
+$$w_{aic} = \frac{r}{\sum_{r \in R} r}$$
 
 where $R$ is the set of all raw AIC weights of the models passed in to `compare_models()`.
 
 The raw AIC weight, $r$, is calculated as follows.
 
-$r = e^{(-\delta/2)}$
+$$r = e^{(-\delta/2)}$$
 
 where $\delta$ is the difference between the current model's AIC score and the best model's AIC score.
 $\delta = 0$ for the best model, and $\delta \gt 0$ for the rest of the models.
@@ -1289,7 +1339,7 @@ Hence, the best model's $r$ is $e^0 = 1$, and the worse models will have $r \lt 
 The BIC is an alternative measure of assessing the trade-off between the number of parameters and model fit.
 The BIC replaces the AIC's first term ($2k$) with $k \ln(n)$. 
 
-$BIC = k \ln(n) - 2 LL$
+$$BIC = k \ln(n) - 2 LL$$
 
 where $k$ is the number of parameters, $n$ is the sample size, and $LL$ is the log likelihood of the current model.
 
@@ -1328,7 +1378,7 @@ Like the BIC, AIC-C also takes sample size into account.
 
 The AIC-C modifies the AIC by introducing a third term. 
 
-$AIC_c = 2k - 2 LL + \frac{2k^2 + 2k}{n-k-1}$
+$$AIC_c = 2k - 2 LL + \frac{2k^2 + 2k}{n-k-1}$$
 
 As before, *k* is the number of parameters, *n* is the sample size, and *LL* is the log likelihood of the current model.
 This newly introduced third term further increases the cost of having additional parameters.
