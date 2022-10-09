@@ -187,14 +187,16 @@ knitr::include_graphics("../man/figures/MaxEnt_vs_penalty.jpg")
 # Ideally, use this (i.e. create graph rather than use an image)...
 # ...but this currently renders small plot & ugly big spaces for labels
 
+# Hack to set up window
 curve(exp(-x), from=0, to=5,
-      col="white", xlab="penalty", ylab="MaxEnt score")    # Hack to set up window
+      col="white", xlab="penalty", ylab="MaxEnt score")    
 
 # Add horizontal & vertical lines at y=0 & x=0
 abline(h=0, col="gray")
 abline(v=0, col="gray")
 
-curve(exp(-x), from=0, to=5.25, col="blue", add=TRUE)      # Extend curve to to R-edge of window
+# Extend curve to to R-edge of window
+curve(exp(-x), from=0, to=5.25, col="blue", add=TRUE)      
 ```
 
 Recall that the probability of an SR given its UR is directly proportional to its MaxEnt score:
@@ -233,7 +235,8 @@ Take a look at the data set below, loaded from the `sample_data_file` data set i
 
 ```{r}
 # Get paths to sample data file
-data_file <- system.file("extdata", "sample_data_file.txt", package = "maxent.ot")
+data_file <- system.file(
+)
 
 # Take a look at the structure of the sample data
 read.table(data_file, header=FALSE, sep='\t')
@@ -349,7 +352,7 @@ On the right-hand side:
 * $y_i$ is the observed surface form of the $i^{th}$ data point, and $x_i$ is the input form that $y_i$ arose from
 * $P(y_i|x_i; w)$ is the probability of realizing underlying $x_i$ as surface $y_i$ under the weights $w$
 
-In other words, the value of each of the elements of $w$ (*i.e.* the weight of each individual constraint) is the only variable available for the model to adjust. 
+Notice how the value of each of the elements of $w$ (*i.e.* the weight of each individual constraint) is the only variable available for the model to adjust. 
 
 
 ### 2.3.2  What guides the weight changes?: Maximizing log likelihood
@@ -381,7 +384,7 @@ Though we haven't yet applied the equation above to calculate the log likelihood
 
 Now we'll apply the log likelihood equation to calculate the log likelihood of the data under the weights of *M1* \& *M2*. 
 Log likelihoods may range from negative infinity to 0, with higher log likelihoods indicating that a model's weights produce a better fit to the observed data.
-Here's the log likelihood equation again (bias term removed since we're not using biases here):
+Here's the log likelihood equation again:
 
 $$LL_w(D) = \Sigma_{i=1}^n ln P(y_i|x_i; w)$$
 
@@ -609,8 +612,9 @@ This means that we believe that every constraint should:
 Since every constraint has the same ideal weight & the same standard deviation (tolerance for weight discrepancy), we can make use of the optional arguments `mu_scalar` & `sigma_scalar` to input $\mu$ and $\sigma$ just once for all constraints.
 ```{r scalarBiases}
 # Train regularized model with mu_scalar=0 & sigma_scalar=1
-regularized_model = optimize_weights(data_file, 
-                                     mu_scalar=0, sigma_scalar=1)
+regularized_model <- optimize_weights(
+  data_file, mu_scalar=0, sigma_scalar=1
+)
 ```
 
 Inspecting the trained regularized model, we now see a value for the attribute `bias_params`:
@@ -658,7 +662,8 @@ cons1_noBias <- simple_model$weights[1]
 # Get weight of Constraint 1 (regularized model)
 cons1_simpleBias <- regularized_model$weights[1]
 
-# Compare learned weights of Constraint 1 in the unbiased model and in the regularized one
+# Compare learned weights of Constraint 1 in the unbiased model...
+# ...and in the regularized one
 print(paste("In the unbiased model, Constraint 1's  weight is:", 
             sprintf(cons1_noBias, fmt = '%#.3f')))
 print(paste("In the regularized model, Constraint 1's  weight is:", 
@@ -721,7 +726,9 @@ The training data for the experimental condition includes only the p&rarr;v alte
 
 ```{r}
 # Get path to data file (experimental condition)
-white_salt_data_file <- system.file("extdata", "sample_whiteSalt_data_file.txt", package = "maxent.ot")
+white_salt_data_file <- system.file(
+  "extdata", "sample_whiteSalt_data_file.txt", package = "maxent.ot"
+)
 
 # View training data (experimental condition)
 read.table(white_salt_data_file, header=FALSE, sep='\t')
@@ -734,9 +741,9 @@ Here, we choose to have the same tolerance for deviation from the preferred weig
 
 ```{r}
 # Fit model with preferred weights for experimental condition
-white_salt_bias_model = optimize_weights(white_salt_data_file,
-                                         mu_vector=c(0, 0, 1.3, 3.65),
-                                         sigma_scalar=sqrt(0.6))
+white_salt_bias_model = optimize_weights(
+  white_salt_data_file, mu_vector=c(0, 0, 1.3, 3.65), sigma_scalar=sqrt(0.6)
+)
 
 # View trained weights (expt cdn with bias)
 white_salt_bias_model$weights
@@ -747,9 +754,10 @@ We'll average out the preferred weights for the two *Map constraints, which resu
 
 ```{r}
 # Fit unbiased model for experimental condition
-white_salt_noBias_model = optimize_weights(white_salt_data_file,
-                                           mu_vector=c(0, 0, 2.27, 2.27),
-                                           sigma_scalar=sqrt(0.6))
+white_salt_noBias_model = optimize_weights(
+  white_salt_data_file, 
+  mu_vector=c(0, 0, 2.27, 2.27), sigma_scalar=sqrt(0.6)
+)
 
 # View trained weights (expt cdn, no bias)
 white_salt_noBias_model$weights
@@ -766,16 +774,22 @@ For now, we'll just focus our attention on the predicted probability calculated 
 
 ```{r}
 # Get path to test file (experimental condition)
-white_salt_test_file <- system.file("extdata", "sample_whiteSalt_test_file.txt", package = "maxent.ot")
+white_salt_test_file <- system.file(
+  "extdata", "sample_whiteSalt_test_file.txt", package = "maxent.ot"
+)
 
 # View test data (experimental condition)
 read.table(white_salt_test_file, header=FALSE, sep='\t')
 
 # Predict probabilities with weights trained with bias (expt cdn)
-predict_probabilities(white_salt_test_file, white_salt_bias_model$weights)
+predict_probabilities(
+  white_salt_test_file, white_salt_bias_model$weights
+)
 
 # Predict probabilities with weights trained without bias (expt cdn)
-predict_probabilities(white_salt_test_file, white_salt_noBias_model$weights)
+predict_probabilities(
+  white_salt_test_file, white_salt_noBias_model$weights
+)
 ```
 
 For ease of reference, the predicted percentage of alternation for the trained biased and unbiased models are summarized in the table below:
@@ -814,23 +828,27 @@ The training data includes only the b&rarr;v alternation, reflecting the trainin
 
 ```{r}
 # Get path to data file (control condition)
-white_control_data_file <- system.file("extdata", "sample_whiteCtrl_data_file.txt", package = "maxent.ot")
+white_control_data_file <- system.file(
+  "extdata", "sample_whiteCtrl_data_file.txt", package = "maxent.ot"
+)
 
 # View training data (control condition)
 read.table(white_control_data_file, header=FALSE, sep='\t')
 
 # Fit model with preferred weights for control condition
-white_control_bias_model = optimize_weights(white_control_data_file,
-                                            mu_vector=c(0, 0, 1.3, 3.65),
-                                            sigma_scalar=sqrt(0.6))
+white_control_bias_model = optimize_weights(
+  white_control_data_file,
+  mu_vector=c(0, 0, 1.3, 3.65), sigma_scalar=sqrt(0.6)
+)
 
 # View trained weights (control cdn with bias)
 white_control_bias_model$weights
 
 # Fit unbiased model for control condition
-white_control_noBias_model = optimize_weights(white_control_data_file,
-                                              mu_vector=c(0, 0, 2.27, 2.27),
-                                              sigma_scalar=sqrt(0.6))
+white_control_noBias_model = optimize_weights(
+  white_control_data_file,
+  mu_vector=c(0, 0, 2.27, 2.27), sigma_scalar=sqrt(0.6)
+)
 
 # View trained weights (control cdn, no bias)
 white_control_noBias_model$weights
@@ -840,16 +858,22 @@ As with the experimental condition above, we'll now subject the two trained mode
 
 ```{r}
 # Get path to test file (control condition)
-white_control_test_file <- system.file("extdata", "sample_whiteCtrl_test_file.txt", package = "maxent.ot")
+white_control_test_file <- system.file(
+  "extdata", "sample_whiteCtrl_test_file.txt", package = "maxent.ot"
+)
 
 # View test data (control condition)
 read.table(white_control_test_file, header=FALSE, sep='\t')
 
 # Predict probabilities with weights trained with bias (control cdn)
-predict_probabilities(white_control_test_file, white_control_bias_model$weights)
+predict_probabilities(
+  white_control_test_file, white_control_bias_model$weights
+)
 
 # Predict probabilities with weights trained with bias (control cdn)
-predict_probabilities(white_control_test_file, white_control_noBias_model$weights)
+predict_probabilities(
+  white_control_test_file, white_control_noBias_model$weights
+)
 ```
 
 For ease of reference, the predicted percentage of alternation for the trained biased and unbiased models are presented in the table below:
@@ -902,12 +926,14 @@ If we've trained a model using `optimize_weights()` and stored the trained model
 
 ``` {r}
 # Get paths to toy data file 
-data_file_a <- system.file("extdata", "sample_data_file.txt", package="maxent.ot")
+data_file_a <- system.file(
+  "extdata", "sample_data_file.txt", package="maxent.ot"
+)
 
 # Fit weights to data (no biases)
 fit_model_a <- optimize_weights(data_file_a)
 
-# Predict probabilities for the same input
+# Predict probabilities for the same input 
 predict_probabilities(data_file_a, fit_model_a$weights)
 ```
 
@@ -936,24 +962,33 @@ We thus get the frequencies below (data_file_b).
 ``` {r}
 # Data has repeated URs (absolute frequency)
 # Get paths to toy data file
-data_file_b <- system.file("extdata", 
-                           "sample_data_file_double_aFreq.txt", 
-                           package="maxent.ot")
+data_file_b <- system.file(
+  "extdata", "sample_data_file_double_aFreq.txt", package="maxent.ot"
+)
 
-# Fit weights to data (no biases)
-fit_model_b <- optimize_weights(data_file_b)
+# Take a look at the structure of the sample data with duplicate URs
+read.table(data_file_b, header=FALSE, sep='\t')
 
-# Predict probabilities for the same input
-predict_probabilities(data_file_b, fit_model_b$weights)
+# Here's the structure of the same data without duplicate URs
+read.table(data_file_a, header=FALSE, sep='\t')
 ```
 
 Notice that both `data_file_a` and `data_file_b` describe the same data, albeit in a different manner.
 If we'd collapsed all instances of repeated URs from `data_file_b`, we'd the get `data_file_a`.
 However, the resulting `Error` from both data sets differ.
+
+``` {r}
+# Fit weights to data (no biases)
+fit_model_b <- optimize_weights(data_file_b)
+
+# Predict probabilities for the same input (duplicate URs)
+predict_probabilities(data_file_b, fit_model_b$weights)
+```
+
 Interpreting the `Error` for `data_file_a` is straightforward, while the `Error` for `data_file_b` is uninterpretable.
 (*e.g.* Regarding `data_file_b`, what does it mean when the the first instance of *Output1-2* has a 25% overprediction error?)
 
-For this reason, it is strongly recommended to check one's data set for duplicate URs, in order to collapse duplicate URs to a single UR if the User desires to make use of the `Error` values.
+For this reason, it is strongly recommended to check one's data set for duplicate URs, in order to collapse duplicate URs into a single UR if the User desires to make use of the `Error` values.
 Alternatively, one could engage in post-hoc data wrangling to achieve interpretable error values if the uncollapsed data set is otherwise desired.
 
 ## 4.2 Get predictions with User-chosen weights
@@ -961,15 +996,22 @@ Let's imagine that we're curious about how particular weights would perform with
 Perhaps we've seen these weights reported in a paper and we'll like to try them out.
 Below, we demonstrate how to prepare these weights so that they'll be compatible with `predict_probabilities()`.
 
+Let's say we want to make predictions with Con1's weight being 1.5 and Con2's weight being 2.5.
+We have to put these weights into a list, and convert it to the appropriate type.
 ``` {r}
 # Get predictions with User-chosen constraint weights
 # Make a list of weights
-# Be sure to order them in exactly the same order in which they appear in the input file!
+# Be sure to order the weights in exactly the same order...
+# ...in which their respective constraints appear in the input file!
 my_wt_ls <- list(1.5, 2.5)
 
 # Convert to double object
 my_wts <- as.double(my_wt_ls)
+``` 
 
+Now we're ready to make predictions with our hand-selected weights.
+
+``` {r}
 # Get predictions
 predict_probabilities(data_file_a, my_wts)
 ```
@@ -995,7 +1037,7 @@ Notice that when $T=1$, the generalized model introduced here is equivalent to t
 ## 5.2 The effect of temperature on probability
 **As temperature increases, the probability distribution becomes less polarized.**
 That is, as temperature increases, the probabilities of the SRs of a given UR move towards equal probability with each other.
-For example, if a particular UR has two SRs, higher values of $T$ will move the probability of each one towards $0.5$.
+For example, if a particular UR has two SRs, higher values of $T$ will move the probability of each SR towards $0.5$.
 
 We'll use the hand-picked weights `my_wts` to illustrate this effect.
 First, we get predictions when $T=1$, $T=3$, and $T=5$, and store the results in the objects `t1_pred`, `t3_pred`, and `t5_pred` respectively.
@@ -1017,7 +1059,7 @@ t5_pred <- predict_probabilities(data_file_c, my_wts, temperature=5)
 ```
 
 Next, we'll construct a dataframe to easily compare the prediction probabilities across the different temperatures.
-First, notice that we can extract the predicted probabilities like so:
+Notice that we can extract the predicted probabilities like so:
 ``` {r}
 # View predicted probability of t1_pred
 t1_pred[, 'Predicted Probability']
@@ -1186,24 +1228,30 @@ To generate the probability distribution over the suffixes of a given stem, we w
 
 ``` {r, eval=FALSE}
 # Get paths to sample Hungarian wug data
-hu_data <- system.file("extdata", "sample_hu_wug.txt", package = "maxent.ot")
+hu_data <- system.file(
+  "extdata", "sample_hu_wug.txt", package = "maxent.ot"
+)
 
 # We'll use the weights learned by training on the lexicon as reported by HZSL on (p.848).
 lex_wts_ls <- list(5.39, 1.69, 1.46, 3.00, 4.04, 2.45, 1.08, .91, 1.73, 2.42)
 
 # Make a named list (optional)
-names(lex_wts_ls) <- list('AGREE(back,nonlocal)',	'AGREE(front,local)',	
-                          'AGREE(nonhigh_front,local)',	'AGREE(low_front,local)',	
-                          'AGREE(double_front,local)',	'USE_FRONT/bilabial__',	
-                          'USE_FRONT/[+cor,+son]__', 'USE_FRONT/sibilant__',	
-                          'USE_FRONT/CC__',	'USE_BACK/[C0i:C0]__')
+names(lex_wts_ls) <- list(
+  'AGREE(back,nonlocal)',	'AGREE(front,local)',	
+  'AGREE(nonhigh_front,local)',	'AGREE(low_front,local)',	
+  'AGREE(double_front,local)',	'USE_FRONT/bilabial__',	
+  'USE_FRONT/[+cor,+son]__', 'USE_FRONT/sibilant__',	
+  'USE_FRONT/CC__',	'USE_BACK/[C0i:C0]__'
+)
 
 # Convert to double object (required type as argument of predict_probabilites())
 lex_wts <- as.double(lex_wts_ls)
 
 # Predict probabilities with temperature set to 1.5
 # Notice also that "UTF-8" is an option for encoding, which comes in useful here
-hu_pred <- predict_probabilities(hu_data, lex_wts, temperature = 1.5, encoding = "UTF-8")
+hu_pred <- predict_probabilities(
+  hu_data, lex_wts, temperature = 1.5, encoding = "UTF-8"
+)
 
 # Let's view some of the predicted probabilities
 # We've dropped the constraint violations for easier viewing
@@ -1214,7 +1262,9 @@ head(hu_pred[, -4:-(ncol(hu_pred)-3)])
 
 # With default temperature=1...
 # ... predicted probability is more polarized
-hu_pred_t1 <- predict_probabilities(hu_data, lex_wts, encoding = "UTF-8")
+hu_pred_t1 <- predict_probabilities(
+  hu_data, lex_wts, encoding = "UTF-8"
+)
 head(hu_pred_t1[, -4:-(ncol(hu_pred_t1)-3)])
 ```
 
@@ -1232,18 +1282,22 @@ We present the constraint weights obtained by fitting each of the 500 simulated 
 
 ``` {r, eval=FALSE}
 # Get path to the constraint weights trained on each of the 500 simulated wug tests
-hu_500simul_wts_path <- system.file("extdata", "hu_500simuls_wts.txt", package = "maxent.ot")
+hu_500simul_wts_path <- system.file(
+  "extdata", "hu_500simuls_wts.txt", package = "maxent.ot"
+)
 
 # Store constraint weights in object `hu_500simul_wts`
 hu_500simul_wts <- read.table(hu_500simul_wts_path, header=TRUE, sep='\t')
 hu_500simul_wts <- data.frame(hu_500simul_wts)
 
 # Rename columns
-names(hu_500simul_wts) <- c('AGREE(back,nonlocal)',	'AGREE(front,local)',
-                            'AGREE(nonhigh_front,local)',	'AGREE(low_front,local)',
-                            'AGREE(double_front,local)',	'USE_FRONT/bilabial__',
-                            'USE_FRONT/[+cor,+son]__', 'USE_FRONT/sibilant__',
-                            'USE_FRONT/CC__',	'USE_BACK/[C0i:C0]__')
+names(hu_500simul_wts) <- c(
+  'AGREE(back,nonlocal)',	'AGREE(front,local)',
+  'AGREE(nonhigh_front,local)',	'AGREE(low_front,local)',
+  'AGREE(double_front,local)',	'USE_FRONT/bilabial__',
+  'USE_FRONT/[+cor,+son]__', 'USE_FRONT/sibilant__',
+  'USE_FRONT/CC__',	'USE_BACK/[C0i:C0]__'
+)
 
 # View the first 6 rows of hu_500simul_wts
 head(hu_500simul_wts)
@@ -1308,7 +1362,6 @@ for (i in 6:10) {
       xlab("weight")
   )
 }
-
 ```
     
 
@@ -1357,9 +1410,13 @@ Thus, the nested criterion is met.
 ``` {r}
 # Get paths to toy data files
 # This file has two constraints
-small_data <- system.file("extdata", "sample_data_file_small.txt", package = "maxent.ot")
+small_data <- system.file(
+  "extdata", "sample_data_file_small.txt", package = "maxent.ot"
+)
 # This file has three constraints
-large_data <- system.file("extdata", "sample_data_file_large.txt", package = "maxent.ot")
+large_data <- system.file(
+  "extdata", "sample_data_file_large.txt", package = "maxent.ot"
+)
 
 # Display the datasets as tables
 read.table(small_data, header=FALSE, sep='\t')
@@ -1387,8 +1444,12 @@ compare_models(small_model, large_model, method='lrt')
 # The real p-value is  .00847, for a chi-sqVal=6.931471	& df=1.
 
 # Get paths to toy data files
-small_data_b_old <- system.file("extdata", "sample_data_file_small_b_old.txt", package = "maxent.ot")
-large_data_b_old <- system.file("extdata", "sample_data_file_large_b_old.txt", package = "maxent.ot")
+small_data_b_old <- system.file(
+  "extdata", "sample_data_file_small_b_old.txt", package = "maxent.ot"
+)
+large_data_b_old <- system.file(
+  "extdata", "sample_data_file_large_b_old.txt", package = "maxent.ot"
+)
 
 # Fit weights to both data sets
 small_model_b_old <- optimize_weights(small_data_b_old)
@@ -1473,4 +1534,122 @@ The `aic.wt` for a current model, $w_{aic}$, is just its raw AIC weight normaliz
 
 $$w_{aic} = \frac{r}{\sum_{r \in R} r}$$
 
-where $R$ is the set of all raw AIC weights of the models p
+where $R$ is the set of all raw AIC weights of the models passed in to `compare_models()`.
+
+The raw AIC weight, $r$, is calculated as follows.
+
+$$r = e^{(-\delta/2)}$$
+
+where $k$ is the number of parameters, $n$ is the sample size, and $LL$ is the log likelihood of the current model.
+
+As with the AIC, a smaller BIC score indicates a better model. 
+
+For both the AIC and the BIC, the first term penalizes models that have more parameters, $k$. 
+However, the number of parameters, $k$, is scaled differently in these two measures.
+For the BIC, $k$ is scaled by $\ln(n)$, where $n$ is the number of samples.
+As the number of observed tokens increases, the penalty accrued by models that have more parameters increases (albeit at a decreasing rate since $k$ is scaled by $\ln(n)$ rather than $n$). 
+In contrast, the AIC scales $k$ with the constant $2$, so sample size has no effect on the penalty accrued by having more parameters, $k$. 
+At $7$ observed tokens and below, a model's BIC score is smaller than its AIC score. 
+At $8$ observed tokens and above, a model's BIC score is larger than its AIC score (since $\ln(7) < 2 < \ln(8)$).
+
+A caveat: Though unlikely to occur, it is advisable to check that the sample size is greater than $1$. At a sample size of $1$, the effect of the number of parameters, $k$, on the BIC score is canceled out. The BIC score becomes directly proportional to the log likelihood alone ($BIC = k \ln(1) -2LL = -2LL$).
+
+``` {r}
+# Compare models using BIC
+compare_models(small_model, large_model, method='bic')
+```
+
+The returned data frame from the BIC method has the same structure as that of the AIC, with one additional column:
+
+* `n`: The number of samples in the data that the model is fit to.
+
+The `bic` and `bic.wt` columns are the BIC counterparts to the `aic` and `aic.wt` columns in the AIC data frame.
+
+Looking at the data frame above, we see that the small model (smaller BIC score) again performs better than the large model (large BIC score). 
+The conditional probability that the small model is the best of all models passed to `compare_models()` is 53.6%.
+
+
+## 6.4 Akaike Information Criterion corrected for small sample size (AIC-C)
+### 6.4.1 AIC-C: Background
+
+The Akaike Information Criterion for small sample sizes (AIC-C) yet another alternative method of comparing the trade-off between the number of parameters and the model fit. 
+Like the BIC, AIC-C also takes sample size into account.
+
+The AIC-C modifies the AIC by introducing a third term. 
+
+$$AIC_c = 2k - 2 LL + \frac{2k^2 + 2k}{n-k-1}$$
+
+As before, *k* is the number of parameters, *n* is the sample size, and *LL* is the log likelihood of the current model.
+This newly introduced third term further increases the cost of having additional parameters.
+As *n* approaches infinity, the third term's denominator approaches 0, so the AIC-C becomes equivalent to the AIC for large sample sizes. 
+
+``` {r}
+# Get paths to toy data files
+# This file has 2 constraints
+small_data_c <- system.file(
+  "extdata", "sample_data_file_small_c.txt", package = "maxent.ot"
+)
+
+# This file has 3 constraints
+large_data_c <- system.file(
+  "extdata", "sample_data_file_large_c.txt", package = "maxent.ot"
+)
+
+# Fit weights to both data sets 
+small_model_c <- optimize_weights(small_data_c) 
+large_model_c <- optimize_weights(large_data_c)
+
+# Compare models using AIC-C
+compare_models(small_model_c, large_model_c, method='aic_c')
+```
+
+The returned data frame from the AIC-C method has the same structure as that of the BIC.
+The `aicc` and `aicc.wt` columns are the AIC-C counterparts to the `bic` and `bic.wt` columns in the BIC data frame respectively.
+
+In the data frame above, the small model (has smaller AIC-C score) performs better than the large model (has larger AIC-C score). 
+The conditional probability that the small model is the best of all the models that were passed to `compare_models()` is $97.4%$.
+
+### 6.4.2 A potential pitfall
+When $n-k \le 1$ for a particular model, its AIC-C value is infinitely large.
+In the example below, this is true of both the large and the small models.
+One way to side-step this issue is to scale the sample size up. 
+For example, the problematic data set below had its sample size increased by a factor of 2 to create the non-problematic data set above.
+
+``` {r}
+# Problematic data set: all models have n-k <= 1
+
+# Compare models using AIC-C
+compare_models(small_model, large_model, method='aic_c')
+```
+
+In the data frame above, none of the models produce a valid AIC-C score.
+Hence the probability that one particular model is the best cannot be calculated (`aicc.wt` is NaN).
+
+In the case where only one of multiple models produces an invalid AIC-C score, the model with the invalid AIC-C score will have an `aicc.wt` of 0.
+The `aicc.wt` for the other models with valid AIC-C scores will be calculated as per normal (see data frame below).
+
+``` {r}
+# Problematic data set: one model has n-k <= 1
+
+# Get paths to toy data files
+# This file has 2 constraints
+small_data_b <- system.file(
+  "extdata", "sample_data_file_small_b.txt", package = "maxent.ot"
+)
+# This file has 3 constraints
+med_data_b <- system.file(
+  "extdata", "sample_data_file_med_b.txt", package = "maxent.ot"
+)
+# This file has 4 constraints
+large_data_b <- system.file(
+  "extdata", "sample_data_file_large_b.txt", package = "maxent.ot"
+)
+
+# Fit weights for all data sets 
+small_model_b <- optimize_weights(small_data_b)
+med_model_b <- optimize_weights(med_data_b)
+large_model_b <- optimize_weights(large_data_b)
+
+# Compare models using AIC-C
+compare_models(small_model_b, med_model_b, large_model_b, method='aic_c')
+```
