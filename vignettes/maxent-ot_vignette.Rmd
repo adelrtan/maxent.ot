@@ -61,53 +61,109 @@ The predicted probability of an SR candidate given its UR depends on the weights
 
 $$P(SR_i|UR_i; w) = \frac{1}{Z_w(UR_i)} exp(- \Sigma_{k=1}^mw_k f_k(SR_i, UR_i))$$
 
-where $f_k(SR_i, UR_i)$ is the number of violations of constraint $k$ incurred by mapping underlying $UR_i$ to surface $SR_i$, and $Z_w(UR_i)$ is a normalization term defined as 
+where 
 
-$$Z(UR_i) = \Sigma_{y\in \mathcal{Y}(UR_i)} exp(- \Sigma_{k=1}^m w_k f_k(SR, UR_i))$$
+* $m$ is the number of constraints
+* $w_k$ is the weight of constraint $k$
+* $f_k(SR_i, UR_i)$ is the number of violations of constraint $k$ incurred by UR-SR pair <$UR_i, SR_i$>
+* $Z_w(UR_i)$ is a normalization term defined as 
 
-where $y \in \mathcal{Y}(UR_i)$ is the set of surface realizations of input $UR_i$.
+$$Z(UR_i) = \Sigma_{SR \in \mathcal{S}(UR_i)} exp(- \Sigma_{k=1}^m w_k f_k(SR, UR_i))$$
 
-We'll walk through the MaxEnt tableaux in *Figure 2* to illustrate how these formulas are applied.
+where $\mathcal{S}(UR_i)$ is the set of surface realizations of input $UR_i$.
 
-```{r, echo=FALSE, fig.cap="Fig 2: Two MaxEnt tableaux.", out.width = '85%'}
-knitr::include_graphics("../man/figures/maxEnt_tableau_3.JPG")
-```
 
 ## 1.4 Calculating MaxEnt probabilities: Step-by-step
+We'll walk through the MaxEnt tableaux in *Figure 2* to illustrate how the equations in &sect;1.3 are applied to calculate the probability of a particular UR-SR pair.
+
+```{r, echo=FALSE, fig.cap="Fig 2: Two MaxEnt tableaux.", out.width = '85%'}
+knitr::include_graphics("../man/figures/maxEnt_tableau_5.jpg")
+```
+
 Notice that these two MaxEnt tableaux have the same URs, SRs, constraints, and constraint violation profiles as the two OT tableaux above.
 However, instead of being ranked, these constraints now have weights (*e.g.* Con1 weight = 1.6; Con2 weight = 0.8).
 There are also four additional columns tagged on to the right of the tableaux, which we use to illustrate how the predicted probabilities are computed.
 
-An important variable that shows up in the formulas above is: $f_k(SR, UR_i)$. 
-This refers to the constraint violation profile for a single UR-SR pair (yellow box).
+### 1.4.1 Number of violations, $f_k(SR_i, UR_i)$
+
+An important variable that shows up in the equations above is: $f_k(SR_i, UR_i)$. 
+This refers to the number of violations of constraint $k$ incurred by the UR-SR pair, <$UR_i, SR_i$>. 
+For example, the UR-SR pair $<$/ur-2/, [sr2-2]$>$ picks up two violations of Con2, so $f_{Con2}(\text{sr2-2}, \text{ur-2}) = 2$ (yellow box).
+
+### 1.4.2 Penalty
 
 Next, we move on to the penalty.
 Penalty has also been called "harmony" in other descriptions of the MaxEnt model.
-To calculate the penalty for each UR-SR pair, we take the weighted sum of its constraint violations.
-For example, the UR-SR pair $<$/ur-2/, [sr2-2]$>$ picks up 1 violation of Con1 and another violation of Con2.
-The weight sum (green box) is thus 
+To calculate the penalty for the UR-SR pair <$UR_i, SR_i$>, we take the weighted sum of its constraint violations:
+$$\text{penalty for <}UR_i, SR_i\text{> } = \text{ } \Sigma_{k=1}^m w_k f_k(SR_i, UR_i)$$
+(Recall that $w_k$ is the weight of constraint $k$, and $m$ is the number of constraints.)
 
-$$weight_{Con1} \times 1 + weight_{Con2} \times 2 = 1.6 \times 1 + 0.8 \times 2 = 3.2$$ 
+Let's apply this equation to calculate the penalty for the UR-SR pair $<$/ur-2/, [sr2-2]$>$. 
+This pair picks up one violation of Con1 and two violations of Con2.
+The weighted sum (green box) is thus: 
 
-The penalty for other UR-SR pairs are similarly calculated.
-For example, the penalty for the UR-SR pair $<$/ur-2/, [sr2-1]$>$ is 
+\begin{align}
+\text{penalty for </ur-2/, [sr2-2]>} &= \Sigma_{k=1}^2 w_k f_k(\text{sr2-2, ur-2}) \\
+&= weight_{Con1} \times 1 + weight_{Con2} \times 2 \\
+&= 1.6 \times 1 + 0.8 \times 2 \\
+&= 3.2
+\end{align}
 
-$$weight_{Con1} \times 0 + weight_{Con2} \times 1 = 1.6 \times 0 + 0.8 \times 1 = 0.8$$
+The penalties for other UR-SR pairs are similarly calculated.
+For example, the penalty for the UR-SR pair $<$/ur-2/, [sr2-1]$>$ is:
 
-The next column gives the value of $e^{-penalty}$.
-The Reader may have also encountered this term being called the "MaxEnt score" or the "potential" in other descriptions of MaxEnt.
+\begin{align}
+\text{penalty for </ur-2/, [sr2-1]>} &= \Sigma_{k=1}^2 w_k f_k(\text{sr2-1, ur-2}) \\
+&=  weight_{Con1} \times 0 + weight_{Con2} \times 1 \\
+&= 1.6 \times 0 + 0.8 \times 1 \\
+&= 0.8
+\end{align}
+
+Notice that $m=2$ because there are two constraints.
+
+### 1.4.3 MaxEnt score
+
+The next column gives the MaxEnt score for each UR-SR pair.
+$$\text{MaxEnt score} = exp(-\text{penalty})$$
+The Reader may have also encountered this term being called the "potential" in other descriptions of MaxEnt.
+Look at the MaxEnt score column of *Figure 2* to see this equation applied.
+
+### 1.4.4 Normalization, $Z$
 
 We then need to normalize the MaxEnt score in order to get probabilities.
 The next column provides the $Z$ value for each UR. 
 $Z$ is short for Zustandssumme, "sum over states", and has also been known as the normalization constant, or the canonical partition function.
-$Z$ is the sum of the MaxEnt scores of all SRs arising from a particular UR.
-For example, $Z($ur-2$)$ is the sum of the MaxEnt scores of all SRs of /ur-2/ (blue box).
+$Z$ is the sum of the MaxEnt scores of all UR-SR pairs arising from a particular UR.
+
+Here's a simplified way to write the equation for the normalization constant of $UR_i$:
+$$Z(UR_i) = \Sigma_{j=1}^l m_j$$
+where $l$ is the number of UR-SR pairs whose UR is $UR_i$, and $m_j$ is the MaxEnt score of the $j^{th}$ UR-SR pair whose UR is $UR_i$.
+
+Let's apply this equation to calculate the normalization constant for /ur-2/ (blue box):
+
+\begin{align}
+Z(\text{ur-2}) &= \Sigma_{i=1}^2m_i \\
+&= 0.499 + 0.041  \\
+&= 0.490
+\end{align}
+
+Here, $l = 2$ because there are only two UR-SR pairs whose UR is /ur-2/.
+We basically add the MaxEnt scores of these two pairs to get $Z(\text{ur-2})$.
+
+### 1.4.5 Predicted probability
 
 The predicted probability is shown in the final column.
-The probability of a particular SR for a given UR is its MaxEnt score divided by the normalization constant, $Z$.
-For example, the probability of [sr2-2] given /ur-2/ (magenta box) is 
+The probability of a particular SR for a given UR, $UR_i$, is this pair's MaxEnt score divided by the normalization constant associated with $UR_i$:
 
-$$P(\text{sr2-2}|\text{ur-2}) = \frac{0.449}{0.490}$$
+$$P(SR_i|UR_i) = \frac{\text{MaxEnt score of <}UR_i, SR_i\text{>}}{Z(UR_i)}$$
+
+Let's apply this equation to calculate the probability of [sr2-2] given /ur-2/ (magenta box):
+
+\begin{align}
+P(\text{sr2-2}|\text{ur-2}) &= \frac{\text{MaxEnt score of <ur-2, sr2-2>}}{Z(\text{ur-2})} \\
+&= \frac{0.449}{0.490} \\
+&= 0.083
+\end{align}
 
 Congratulations!
 You now know how to calculate the probabilities of an SR given its UR when provided with constraint weights.
@@ -119,6 +175,7 @@ Like the Boltzmann distribution, the probability of a particular SR given the UR
 
 **As a particular SR's penalty increases, its probability decreases** (assuming everything else remains unchanged).
 The graph below visualizes how a MaxEnt score varies with penalty (*Figure 3*).
+Essentially, a higher penalty results in a lower MaxEnt score.
 (Note: It is not possible to graph how probability varies with penalty, since the actual probability depends on the penalties of the other SRs arising from the same UR, so we'll use the MaxEnt score as an intermediary.)
 
 ``` {r, echo=FALSE, fig.cap="Fig 3: How MaxEnt score varies with penalty.", out.width = '85%'}
@@ -144,12 +201,12 @@ Recall that the probability of an SR given its UR is directly proportional to it
 
 $$P(SR_i|UR_i) \propto M_{UR_i, SR_i}$$
 
-where $M_{UR_i, SR_i}$ is the MaxEnt score of the UR-SR pair $<$*UR~i~*, *SR~i~*$>$.
+where $M_{UR_i, SR_i}$ is the MaxEnt score of the UR-SR pair <$UR_i, SR_i$>.
 We know this because 
 
 $$P(SR_i|UR_i) = M_{UR_i, SR_i} \times \frac{1}{Z(UR_i)}$$
 
-Hence, the relationship between penalty and probability is clear (though the graph shows the MaxEnt score in place of probability).
+Hence, the relationship between penalty and probability is clear -- a higher penalty results in lower probability (all else remaining unchanged).
 
 The graph also indicates that as penalty increases, the MaxEnt score approaches but never quite reaches 0.
 Thus, SR candidates with infinitely high penalties still receive a MaxEnt score greater than zero.
@@ -178,7 +235,7 @@ Take a look at the data set below, loaded from the `sample_data_file` data set i
 # Get paths to sample data file
 data_file <- system.file("extdata", "sample_data_file.txt", package = "maxent.ot")
 
-# Take a look at structure of sample data
+# Take a look at the structure of the sample data
 read.table(data_file, header=FALSE, sep='\t')
 ```
 
@@ -212,7 +269,7 @@ simple_model <- optimize_weights(data_file)
 
 Let's take a closer look at our object `simple_model`:
 ``` {r}
-# Take a look at model we've fit (no biases used)
+# View the model we've fit (no biases used)
 simple_model
 ```
 
@@ -246,11 +303,38 @@ But first, let's gain a better understanding of how log likelihood guides traini
 
 
 ## 2.3 Fitting the model to data: Explained
+The `optimize_weights()` function implements a learner that adjusts constraint weights in order to fit the model.
+The learner's objective is to maximize the value of the objective function, and weight adjustments are made with this objective in mind.
+The objective function, $O(w)$, is composed of two terms:
+
+$$O(w) = LL_w(D) - B(w)$$
+
+where $LL_w(D)$ is the log likelihood of training data $D$ under weights $w$, and $B(w)$ is the price to pay for choosing the particular vector of weights $w$.
+
+The first term, $LL_w(D)$, is a measure of model fit to data.
+Models that more closely match the observed distribution have a higher $LL_w(D)$ than those with poorer matches.
+$LL_w(D)$ ranges between negative infinity and zero.
+
+The second term, $B(w)$, is used when we want to nudge the model towards particular preferred weights (*e.g.* when using biases or priors).
+Models with weights that are closer to the preferred ones pay a smaller price (smaller $B(w)$) than those with more aberrant weights.
+$B(w)$ ranges between zero and positive infinity.
+
+Higher values of $LL_w(D)$ and lower values of $B(w)$ both contribute to increasing the value of the objective function $O(w)$.
+Recall that the learner's objective is to arrive at as high a value of $O(w)$ as possible (it seeks to maximize the value of $O(w)$).
+In other words, the learner adjusts weights towards weight values that: 
+
+(1) improve the model's match to the observed distribution: increase $LL_w(D)$
+(2) move weights closer to the preferred weight values: decrease $B(w)$
+
+In the rest of this section, we discuss the log likelihood of data, $LL_w(D)$, in greater depth.
+We leave the discussion of $B(w)$ to &sect;3, where priors are introduced.
+
+
 ### 2.3.1 Defining log likelihood
-By default, the `optimize_weights()` function maximizes the log likelihood of the training data by changing the constraint weights.
+When no priors are used, maximizing the objective function $O(w)$ is equivalent to maximizing the log likelihood of training data $LL_w(D)$ alone.
 The log likelihood of the training data is:
 
-$$LL_w(D) = \Sigma_{i=1}^n ln P(y_i|x_i; w) - \Sigma_{k=1}^m \frac{(w_k - \mu_k)^2}{2\sigma_k^2}$$
+$$LL_w(D) = \Sigma_{i=1}^n ln P(y_i|x_i; w)$$
 
 Let's unpack the terms of this equation. On the left-hand side, we have $LL_w(D)$, where
 
@@ -258,7 +342,7 @@ Let's unpack the terms of this equation. On the left-hand side, we have $LL_w(D)
 * $D$ is the training data
 * $w$ is the vector of constraint weights
 
-For the first term of the right-hand side:
+On the right-hand side:
 
 * $n$ is the number of observed data points
   + *i.e.* the sum of the frequency column in the input
@@ -266,7 +350,7 @@ For the first term of the right-hand side:
 * $P(y_i|x_i; w)$ is the probability of realizing underlying $x_i$ as surface $y_i$ under the weights $w$
 
 In other words, the value of each of the elements of $w$ (*i.e.* the weight of each individual constraint) is the only variable available for the model to adjust. 
-For now, we'll ignore the second term on the right-hand side of the equation (the bias term).
+
 
 ### 2.3.2  What guides the weight changes?: Maximizing log likelihood
 Recall that the learner takes in a distribution over training examples, $D$.
@@ -302,16 +386,27 @@ Here's the log likelihood equation again (bias term removed since we're not usin
 $$LL_w(D) = \Sigma_{i=1}^n ln P(y_i|x_i; w)$$
 
 Applying the equation to *M1* ($w_{M1}$ refers to *M1*'s weights): 
-$$LL_{w_{M1}}(D) = ln(.5) + ln(.5) + ln(1) = -1.386$$
+\begin{align}
+LL_{w_{M1}}(D) &= \Sigma_{i=1}^3 ln P(y_i|x_i; w) \\
+&= ln(.5) + ln(.5) + ln(1) \\
+&= -1.386
+\end{align}
+
 Applying the equation to *M2* ($w_{M2}$ refers to *M2*'s weights): 
-$$LL_{{w_{M2}}}(D) = ln(.25) + ln(.75) + ln(1) = -2.367$$
+\begin{align}
+LL_{{w_{M2}}}(D) &= \Sigma_{i=1}^3 ln P(y_i|x_i; w) \\
+&= ln(.25) + ln(.75) + ln(1) \\
+&= -2.367
+\end{align}
 
 The log likelihood of the observed data, $D$, is higher under the weights of *M1* than it is under the weights of *M2*.
 This is because *M1*'s weights produce a predicted distribution over observed UR-SR pairs that is closer to the observed distribution than *M2*'s weights do.
 (Notice that only observed data are included in the calculations above.
 Despite Output2-2 getting 50\% of the predicted probability in *M2*, it does not contribute to the log likelihood.)
 
-Hence, the learner's objective is to maximize the log likelihood of the data; that is, finding weights that produce a predicted distribution that is as close to the observed one as possible.
+Hence, aiming to maximize the log likelihood of training data results in finding weights that produce a predicted distribution that is as close to the observed one as possible.
+For example, we can imagine the learner starting with the weights that produce a distribution that is very distant from that of the observed training data.
+With its goal of maximizing the log likelihood of training data, the learner moves to the weights of *M2*, and eventually arrives at the weights of *M1*, where training is halted and *M1*'s weights are the weights of the final trained model.
 
 
 %%TODO: It's been awkward calling the full formulation of the objective function (which also includes the bias in addition to LL) "log likelihood". Since really only the first term is the log likelihood. Do we want find a more accurate name for the term we're maximizing? Maybe "loss"? Or maybe just "objective function"? I've used the term cost elsewhere to describe the "cost" of picking certain constraint weights that differ from a preferred value if we've decided beforehand that this constraint's weight should be a particular preferred value, so maybe avoid "cost".
@@ -320,44 +415,54 @@ Hence, the learner's objective is to maximize the log likelihood of the data; th
 ### 2.3.3 The learning algorithm
 %%TODO: Do we want to explain the learning algo? L-BFGS? Or is this an overkill? Maybe just some light hill-climbing without the L-BFGS (though the package actually implements L-BFGS-B)?
 
+* Probably stuff from second-last para of manual goes here.
+* also include upper- and lower-bound info.
+
 
 # 3 Fitting the model with priors: `optimize_weights()`
 
-Here's the general formula for log likelihood, repeated here for ease of reference:
+Here's the general formula for the objective function, $O(w)$, repeated here for ease of reference:
 
-$$LL_w(D) = \Sigma_{i=1}^n ln P(y_i|x_i; w) - \Sigma_{k=1}^m \frac{(w_k - \mu_k)^2}{2\sigma_k^2}$$
+$$O(w) = LL_w(D) - B(w)$$
 
-In the previous section (&sect;2), we ignored the second term, so log likelihood depended only upon the likelihood of the training data under the current weights.
-In this section, we'll make use of the second term.
+In the previous section (&sect;2), we ignored the second term, so objective function, $O(w)$, depended upon only the log likelihood of the training data under the current weights.
+In this section, we'll make use of the second term, $B(w)$.
 This term is also known by several names such as the "bias term", the "prior", and in special cases, the "regularization term".
-The bias term allows us to nudge the learner towards particular weights by introducing an added cost for weights that differ from the ones that the User specifies.
+The bias term allows us to nudge the learner towards particular weights by introducing an added price to pay for weights that differ from the ones that the User specifies.
 
 Some use cases for the bias term include using the bias term as simple regularization to avoid overfitting (Goldwater & Johnson 2003), and the modeling of proposed phonological learning biases (Wilson 2006, White 2013, Mayer 2021, among others).
 Worked examples using the bias term for regularization and for modeling learning biases are provided in &sect;3.3 and &sect;3.4 respectively.
 
 ## 3.1 Unpacking the math behind the bias term
-The bias term has three variables: $w_k$, $\mu_k$ and $\sigma_k$.
+Here's the formula for the bias term, which determines the price to be paid for choosing particular constraint weights:
 
-* $w_k$ is the weight of constraint $k$.
-* $\mu_k$ and $\sigma_k$ parameterize a normal distribution that acts as a prior for the value of $w_k$.
+$$B(w) =  \Sigma_{k=1}^m \frac{(w_k - \mu_k)^2}{2\sigma_k^2}$$
 
-Every constraint, $k$, whose weight $w_k$ differs from $\mu_k$ will thus incur an additional cost.
-This cost is subtracted from the log likelihood, and thus makes it smaller (notice the negative sign preceding the second term).
-Recall that for log likelihood, the higher the better.
-The cost incurred depends on two factors: (1) Distance from the ideal weight; (2) Tolerance for weight discrepancy.
+* $m$ is the number of constraints
+* $w_k$ is the weight of constraint $k$
+* $\mu_k$ and $\sigma_k$ parameterize a normal distribution that acts as a prior for the value of $w_k$
+  + $\mu_k$: constraint $k$'s ideal weight
+  + $\sigma_k$: indicates tolerance for deviation from ideal weight, $\mu_k$
 
-(1) Cost increases as the distance from the ideal weight increases. 
+Every constraint, $k$, whose weight $w_k$ differs from $\mu_k$ will thus incur an additional price that needs to be paid.
+This price is subtracted from the log likelihood ($LL_w(D)$), and thus makes the objective function, $O(w)$ smaller (notice the negative sign preceding the second term).
+Recall that the learner's goal is to maximize the objective function, $O(w)$ (*i.e.* get it as high as possible).
+The price to be paid depends upon two factors: (1) Distance from the ideal weight; (2) Tolerance for weight discrepancy.
+
+(1) Price to be paid increases as the distance from the ideal weight increases. 
 The distance from the ideal weight is $w_k - \mu_k$. 
 For example, let's set the ideal weight for constraint $k$ at 0 ($\mu_k$ = 0). 
-A model that gives constraint $k$ a weight of 1.5 will accrue a lower cost than one that gives it a weight of 3.5, as the former has a smaller weight discrepancy.
-More specifically, the value that is subtracted form the log likelihood is directly proportional to the square of the weight discrepancy, all else being equal (*i.e.* value to be subtracted $\propto (w_k - \mu_k)^2$).
+A model that gives constraint $k$ a weight of 1.5 will accrue a lower price to pay than one that gives it a weight of 3.5, as the former has a smaller weight discrepancy.
+More specifically, the value that is subtracted (*i.e.* price to pay) for constraint $k$ is directly proportional to the square of the weight discrepancy, all else being equal. 
+$$ \text{value to be subtracted} \propto (w_k - \mu_k)^2$$
 
-(2) Cost increases as the tolerance for weight variation decreases. 
+(2) Price to be paid increases as the tolerance for weight variation decreases. 
 $\sigma_k$ determines how costly the weight discrepancy is for constraint $k$. 
 The smaller $\sigma_k$ is, the lower the tolerance for a particular weight discrepancy.
 For example, let's imagine that we set the ideal weight for constraint $k$, at 0 ($\mu_k$ = 0), and that the constraint's actual weight, $w_k$ is 1.5; the weight discrepancy is thus 1.5.
-This same weight discrepancy incurs a higher cost in a model that has $\sigma_k$ = 0.5 (lower tolerance) than in a model that has $\sigma_k$ = 1 (higher tolerance).
-More specifically, the value that is subtracted from the log likelihood is inversely proportional to the square of the tolerance, all else being equal (*i.e.* value to be subtracted $\propto (\frac{1}{\sigma_k})^2$).
+This same weight discrepancy results in a higher price to pay in a model that has $\sigma_k$ = 0.5 (lower tolerance) than in a model that has $\sigma_k$ = 1 (higher tolerance).
+More specifically, the value that is subtracted (*i.e.* price to pay) for constraint $k$ is inversely proportional to the square of the tolerance, all else being equal.
+$$ \text{value to be subtracted} \propto (\frac{1}{\sigma_k})^2$$
 
 The choice of $\sigma$ depends on the sample size. 
 As the number of data points increases, $\sigma$ must decrease in order for the effect of the bias to remain constant.
@@ -385,7 +490,7 @@ bias_file <- system.file(
   "extdata", "sample_bias_file.txt", package = "maxent.ot"
 )
 
-# Take a look at structure of bias_file
+# Take a look at the structure of the bias_file
 read.table(bias_file, header=FALSE, sep='\t')
 ```
 
@@ -435,10 +540,10 @@ optimize_weights(
 ```
 
 Any combination of arguments can be used to specify the bias parameters.
-The User, however, is advised that when multiple values for the same parameter is specified, the algorithm decides which one to use according to the chart in *Figure 4*.
+The User, however, is advised that when multiple values are specified for the same parameter, the algorithm decides which one to use according to the chart in *Figure 4*.
 
 ```{r, echo=FALSE, fig.cap="Fig 4: Hierarchy for choosing which bias parameters to use when conflicts arise. Parent over-writes child.", out.width = '25%'}
-knitr::include_graphics("../man/figures/bias_param_hierarchy.png")
+knitr::include_graphics("../man/figures/bias_param_hierarchy.jpg")
 ```
 
 In this chart, the argument above takes precedence over the one(s) it dominates.
@@ -450,93 +555,108 @@ If only one of the two bias parameters is present, an error will be raised.
 
 
 ## 3.3 Overfitting & regularization
-Recall that `simple_model` attained a log likelihood of -1.386.
+### 3.3.1 Ceiling log likelihood
+In &sect;2.2 we noted that the log likelihood attained by `simple_model` was in fact at ceiling.
 ``` {r}
 # Get log likelihood of simple model
 simple_model$loglik
 ```
 
-This log likelihood is in fact at ceiling. 
-We know that because each data set has a theoretical maximum likelihood, which can be calculated.
-
+Each data set has a theoretical maximum log likelihood, which can be calculated.
 Recall that the data set had 3 data points (*i.e.* observed outputs). 
+(Frequency shows up in the third column.)
 
 ``` {r}
-# Take a look at sample data
+# View the data that was used to train `simple_model`
 read.table(data_file, header=FALSE, sep='\t')
 ```
 
 * For Input1, there were 2 outputs, each of which surfaced once. 
-  + Given Input1, the probability of each surfaced output is $.5$.
+  + Observed $P(\text{Output1-1}|\text{Input1}) = 0.5$
+  + Observed $P(\text{Output1-2}|\text{Input1}) = 0.5$
 * For Input2, 1 output surfaced once. 
-  + Given Input2, the probability of its lone surfaced output is $1$.
+  + Observed $P(\text{Output2-1}|\text{Input2}) = 1$
 
-Thus the maximum attainable log likelihood is: $ln(.5) + ln(.5) + ln(1)= -1.386$, which happens to be what the trained model attained.
+Let's calculate the theoretical ceiling log likelihood.
+Here's the equation for log likelihood of training data, repeated for easy reference:
 
+$$LL_w(D) = \Sigma_{i=1}^n ln P(y_i|x_i; w)$$
+
+A trained model that matches the observed distribution perfectly would have attained the ceiling log likelihood.
+We'll imagine just such a perfect trained model that matches the observed distribution perfectly, and calculate its log likelihood of training data: 
+\begin{align}
+LL_w(D) &= \Sigma_{i=1}^3 ln P(y_i|x_i; w)\\
+&= ln(.5) + ln(.5) + ln(1) \\
+&= -1.386
+\end{align}
+
+Since the log likelihood of training data attained by our perfect trained model matches that of `simple_model`, we conclude that `simple_model` also attained the ceiling log likelihood.
+In other words, the distribution produced by `simple_model`'s weights matches the distribution of the training data perfectly.
+
+### 3.3.2 Regularization as a strategy to combat overfitting
 Trained models that fit the training data too well often cannot generalize to unseen data.
 Such models are said to **overfit** the training data.
-
 One strategy to reduce overfitting is to include a regularization term. 
 The intended effect of regularization is to keep the weights as low as possible. 
 
 To put this into practice, we'll make use of the optional arguments `mu_scalar` & `sigma_scalar` of the function `optimize_weights()`.
-
 To keep weights low, we'll set `mu_scalar = 0` & `sigma_scalar = 1`.
 This means that we believe that every constraint should:
 
   * Have an ideal weight = 0
   * Have standard deviation = 1
 
-Since every constraint has the same ideal weight & the same standard deviation (tolerance for weight discrepancy), we can make use of the optional arguments `mu_scalar` & `sigma_scalar`.
-These arguments allow us to input $\mu$ and $\sigma$ just once for all constraints.
+Since every constraint has the same ideal weight & the same standard deviation (tolerance for weight discrepancy), we can make use of the optional arguments `mu_scalar` & `sigma_scalar` to input $\mu$ and $\sigma$ just once for all constraints.
 ```{r scalarBiases}
-# Train model with mu_scalar=0 & sigma_scalar=1
-muS_sigS_bias_model = optimize_weights(data_file,
-                                       mu_scalar=0, sigma_scalar=1)
+# Train regularized model with mu_scalar=0 & sigma_scalar=1
+regularized_model = optimize_weights(data_file, 
+                                     mu_scalar=0, sigma_scalar=1)
 ```
 
-Inspecting the trained model, we now see a value for the attribute `bias_params`:
+Inspecting the trained regularized model, we now see a value for the attribute `bias_params`:
 ```{r}
-# Take a took at the model trained with scalar biases
-muS_sigS_bias_model
+# Take a took at the regularized model trained with scalar biases
+regularized_model
 ```
 
 We can retrieve this attribute alone:
 ```{r}
-# Take a look at the bias parameters we used during model training
-muS_sigS_bias_model$bias_params
+# View the bias parameters we used during model training
+regularized_model$bias_params
 ```
 
 Constraints are ordered in rows.
 The first column gives the $\mu$ and the second column the $\sigma$ for the constraint in question.
 
-Let's take a look at the trained weights for this simple bias model:
+Let's take a look at the trained weights for the regularized model:
 ```{r biasModelAttributes}
-# Get learned weights for the model trained with scalar biases
-muS_sigS_bias_model$weights
+# Get learned weights for the regularized model trained with scalar biases
+regularized_model$weights
 ```
-We see that the trained model has learned that Constraint 1 has weight = 0.105, and Constraint 2 has weight = 0.316.
+The trained regularized model has learned that Constraint 1 has weight = 0.105, and Constraint 2 has weight = 0.316.
 Notice that the weights for both constraints are now closer to 0 (*cf.* the unbiased model where trained weights for both constraints were 14.2).
-We attained this by including a prior term that increased the cost of weights as their distance from `mu_scalar` increased. 
+We attained this by including a prior term that tagged on a price to pay for weights whose value did not exactly match the ideal weight.
+In particular the price to be paid increased the further a constraint's weight was from the ideal weight $0$.
 
-We also see that the log likelihood of this model is lower than ceiling ($-2.000 < -1.386$), so overfitting is less likely to occur with this regularized model.
+Notice also that the log likelihood of the regularized model is below ceiling ($-2.000 < -1.386$).
 
 ```{r biasModelLoglik}
 # Get log likelihood of model trained with scalar biases
-muS_sigS_bias_model$loglik
+regularized_model$loglik
 ```
 
-#### Retrieving the weight for 1 constraint
+**Retrieving the weight of 1 constraint**
+
 Let's imagine that we're only interested in a tracking the weight of a subset of the constraints.
 For example, we're interested only in Constraint 1, and want to track the weight learned for this constraint in the unbiased and the simple bias (regularized) model.
-We use index `1` to pick out the first constraint in the named list `your_model_name$weights`.
+We use index `1` to pick out the first constraint from the named list `your_model_name$weights`.
 Similarly, if we were interested in the second constraint, we'd use index `2`, and so on.
 ```{r}
 # Get weight of Constraint 1 (simple model)
 cons1_noBias <- simple_model$weights[1]
 
 # Get weight of Constraint 1 (regularized model)
-cons1_simpleBias <- muS_sigS_bias_model$weights[1]
+cons1_simpleBias <- regularized_model$weights[1]
 
 # Compare learned weights of Constraint 1 in the unbiased model and in the regularized one
 print(paste("In the unbiased model, Constraint 1's  weight is:", 
@@ -550,6 +670,8 @@ print(paste("In the regularized model, Constraint 1's  weight is:",
 Another reason to make use of the prior term is to model substantive effects.
 We can set different preferred weights ($\mu$) for different constraints, by setting different tolerances for deviation from the preferred weight ($\sigma$), or by using a combination of the two.
 
+We'll walk through a simplified version of White (2017), in which substantive effects were used to model psycholinguistic results.
+
 
 ### 3.4.1 The phenomenon: Productivity of saltation (White 2017)
 
@@ -562,7 +684,7 @@ That is, for those trained on the p&rarr;v alternation, the b&rarr;v alternation
 
 **Experimental result to be modeled:** 
 
-Extension to untrained sounds occurred more frequently in the experimental condition (trained on p&rarr;v; extended to b&rarr;v) at 73% than in the control condition (trained on b&rarr;v; txtended to p&rarr;v) at 20%. The percentage alternation by participants in the response phase is shown below. 
+Extension to untrained sounds occurred more frequently in the experimental condition (trained on p&rarr;v; extended to b&rarr;v) at 73% than in the control condition (trained on b&rarr;v; extended to p&rarr;v) at 20%. The percentage alternation by participants in the response phase is shown below. 
 
 ```{r echo=FALSE}
 # Create matrix with 3 columns
@@ -587,7 +709,7 @@ So how can we introduce these substantive factors into the model?
 Intuitively, we want to make it more difficult to map [p] to [v] than it is to map [b] to [v].
 We will use *Map(x,y) constraints (Zuraw 2007, 2013), which prohibit the mapping between sound x and sound y.
 We give \*Map(p,v) a higher preferred weight than \*Map(b,v), which means that the mapping from [p] to [v] is more strongly prohibited than the mapping from [b] to [v].
-We'll set $\mu$'s of these constraints to the following preferred weights:
+Following White, we'll set $\mu$'s of these constraints to the following preferred weights:
 
 * $\mu$ of \*Map(b,v) = 1.3
 * $\mu$ of \*Map(p,v) = 3.65
@@ -600,19 +722,23 @@ The training data for the experimental condition includes only the p&rarr;v alte
 ```{r}
 # Get path to data file (experimental condition)
 white_salt_data_file <- system.file("extdata", "sample_whiteSalt_data_file.txt", package = "maxent.ot")
+
+# View training data (experimental condition)
+read.table(white_salt_data_file, header=FALSE, sep='\t')
 ```
 
 We now train the bias model for the experimental condition, making use of the argument `mu_vector`.
-We want the value of $\mu$ to be 0, 0, 1.3 and 3.65 for the first four constraints respectively.
+We want the value of $\mu$ to be 0, 0, 1.3 and 3.65 for the four ordered constraints [\*V[-cont]V, \*V[-voi]V, \*Map(b,v), \*Map(p,v)] respectively.
 We have to combine these four values into a vector using the `c()` function (*i.e.* `c(0, 0, 1.3, 3.65)`).
 Here, we choose to have the same tolerance for deviation from the preferred weight for all constraints, so we'll use the argument `sigma_scalar`.
 
 ```{r}
 # Fit model with preferred weights for experimental condition
 white_salt_bias_model = optimize_weights(white_salt_data_file,
-                                       mu_vector=c(0, 0, 1.3, 3.65), sigma_scalar=sqrt(0.6))
+                                         mu_vector=c(0, 0, 1.3, 3.65),
+                                         sigma_scalar=sqrt(0.6))
 
-# Look at trained weights (expt cdn with bias)
+# View trained weights (expt cdn with bias)
 white_salt_bias_model$weights
 ```
 
@@ -622,9 +748,10 @@ We'll average out the preferred weights for the two *Map constraints, which resu
 ```{r}
 # Fit unbiased model for experimental condition
 white_salt_noBias_model = optimize_weights(white_salt_data_file,
-                                       mu_vector=c(0, 0, 2.27, 2.27), sigma_scalar=sqrt(0.6))
+                                           mu_vector=c(0, 0, 2.27, 2.27),
+                                           sigma_scalar=sqrt(0.6))
 
-# Look at trained weights (expt cdn, no bias)
+# View trained weights (expt cdn, no bias)
 white_salt_noBias_model$weights
 ```
 
@@ -634,12 +761,15 @@ Notice how both these phases (training and response) reflect the experimental se
 
 We'll need a new test file that includes the observed frequencies for both the test (p&rarr;v) and extension (b&rarr;v) alternations.
 We'll pass both the models trained above as well as the new test file to the function `predict_probabilities()`.
-We'll take a closer look at both the function `predict_probabilities()`, and the structure of the test file in &sect;4 below.
+We'll take a closer look at both the function `predict_probabilities()`, and the structure of the test file when we introduce `predict_probabilities()` in &sect;4 below.
 For now, we'll just focus our attention on the predicted probability calculated by this function.
 
 ```{r}
 # Get path to test file (experimental condition)
 white_salt_test_file <- system.file("extdata", "sample_whiteSalt_test_file.txt", package = "maxent.ot")
+
+# View test data (experimental condition)
+read.table(white_salt_test_file, header=FALSE, sep='\t')
 
 # Predict probabilities with weights trained with bias (expt cdn)
 predict_probabilities(white_salt_test_file, white_salt_bias_model$weights)
@@ -683,31 +813,37 @@ Let's now train a biased and an unbiased model for the control condition.
 The training data includes only the b&rarr;v alternation, reflecting the training phase of the control condition:
 
 ```{r}
-# Get path to data file (experimental condition)
+# Get path to data file (control condition)
 white_control_data_file <- system.file("extdata", "sample_whiteCtrl_data_file.txt", package = "maxent.ot")
+
+# View training data (control condition)
+read.table(white_control_data_file, header=FALSE, sep='\t')
 
 # Fit model with preferred weights for control condition
 white_control_bias_model = optimize_weights(white_control_data_file,
-                                       mu_vector=c(0, 0, 1.3, 3.65), sigma_scalar=sqrt(0.6))
+                                            mu_vector=c(0, 0, 1.3, 3.65),
+                                            sigma_scalar=sqrt(0.6))
 
-# Look at trained weights (control cdn with bias)
+# View trained weights (control cdn with bias)
 white_control_bias_model$weights
-```
 
-```{r}
 # Fit unbiased model for control condition
 white_control_noBias_model = optimize_weights(white_control_data_file,
-                                       mu_vector=c(0, 0, 2.27, 2.27), sigma_scalar=sqrt(0.6))
+                                              mu_vector=c(0, 0, 2.27, 2.27),
+                                              sigma_scalar=sqrt(0.6))
 
-# Look at trained weights (control cdn, no bias)
+# View trained weights (control cdn, no bias)
 white_control_noBias_model$weights
 ```
 
-As with the experimental condition above, we'll now subject the two trained models to the response phase, which includes the test (b&rarr;v) and (p&rarr;v) extension tasks.
+As with the experimental condition above, we'll now subject the two trained models to the response phase, which includes the test (b&rarr;v) and extension (p&rarr;v) tasks.
 
 ```{r}
 # Get path to test file (control condition)
 white_control_test_file <- system.file("extdata", "sample_whiteCtrl_test_file.txt", package = "maxent.ot")
+
+# View test data (control condition)
+read.table(white_control_test_file, header=FALSE, sep='\t')
 
 # Predict probabilities with weights trained with bias (control cdn)
 predict_probabilities(white_control_test_file, white_control_bias_model$weights)
@@ -739,15 +875,17 @@ During the testing phase, participants performed the following two alternations 
   * [b] &rarr; [v] (trained "test"): 90% 
   * [p] &rarr; [v] (untrained "extension"): 20%
   
-The biased model performs relatively well.
+The biased model matches the observed data relatively well.
 The unbiased model, in contrast, greatly overgeneralizes to the untrained p&rarr;v alternation.
 
 ### 3.4.4 Conclusion 
-Overall, the biased model performed much better than the unbiased one at modeling human subject responses during the response phase.
-The unbiased model both underpredicted extension to the b&rarr;v alternation in the experimental condition and overpredicted the extension to the p&rarr;v alternation in the control condition.
+Overall, the biased model, which incorporated substantive biases, performed much better than the unbiased one (no substantive influences) at modeling human subject responses during the response phase.
+The unbiased model both greatly underpredicted extension to the b&rarr;v alternation in the experimental condition and greatly overpredicted the extension to the p&rarr;v alternation in the control condition.
+In contrast, the biased model neither vastly under- nor overpredicted on any of the response tasks.
+
 For the biased model, we introduced different preferred weights for separate constraints by utilizing the `mu_vector` argument of the `optimize_weights()` function.
 These preferred weights were chosen to represent the substantive effects that arose from perceptual distances.
-The resulting trained biased model was able to match the observed frequencies of alternations produced by human subjects during the response phase much more closely than its unbiased counterpart in all experimental conditions. 
+The resulting trained biased model was able to match the observed frequencies of alternations produced by human subjects during the response phase much more closely than its unbiased counterpart in all experimental conditions, thus demonstrating the utility of incorporating substantive biases for linguistic modeling. 
 
 
 # 4 Making predictions: `predict_probabilities()`
@@ -759,13 +897,12 @@ The function `predict_probabilities()` requires at the very least, the following
 (2) Constraint weights
 
 ## 4.1 Get predictions with trained weights
-If we've trained the model using `optimize_weights()` and stored it in the object `fit_model`, we can specify the constraint weights by passing in the `weights` attribute of the model: `fit_model$weights`. 
+Let's imagine that we want to make a prediction using the weights of a model that we've trained using `optimize_weights()`.
+If we've trained a model using `optimize_weights()` and stored the trained model in the object `fit_model`, we can specify the constraint weights by passing in the `weights` attribute of the model: `fit_model$weights`. 
 
 ``` {r}
 # Get paths to toy data file 
-data_file_a <- system.file(
-  "extdata", "sample_data_file.txt", package="maxent.ot"
-)
+data_file_a <- system.file("extdata", "sample_data_file.txt", package="maxent.ot")
 
 # Fit weights to data (no biases)
 fit_model_a <- optimize_weights(data_file_a)
@@ -784,23 +921,24 @@ The structure of the returned object is as follows:
   + Positive value: overprediction
   + Negative value: underprediction
 
-#### A point of caution: Duplicate UR entries
+**A point of caution: Duplicate UR entries**
+
 When there are multiple instances of the same UR, both `Predicted Probability` and `Observed Probability` are normalized over all instances of the UR.
 However, `Error` is still computed row-wise.
 This leads to issues with the interpretation of `Error`.
 
 Duplicate UR entries may arise when modeling experimental data.
 For example, we'll imagine that our experiment had two unique URs: *Input1* and *Input2*.
-The first subject picked *Output1-1* for *Input1* and *Output2-1* for *Input2*.
-The second subject picked *Output1-2* for *Input1* and failed to respond for *Input2*.
+The first participant picked *Output1-1* for *Input1* and *Output2-1* for *Input2*.
+The second participant picked *Output1-2* for *Input1* and failed to respond for *Input2*.
 We thus get the frequencies below (data_file_b).
 
 ``` {r}
 # Data has repeated URs (absolute frequency)
 # Get paths to toy data file
-data_file_b <- system.file(
-  "extdata", "sample_data_file_double_aFreq.txt", package="maxent.ot"
-)
+data_file_b <- system.file("extdata", 
+                           "sample_data_file_double_aFreq.txt", 
+                           package="maxent.ot")
 
 # Fit weights to data (no biases)
 fit_model_b <- optimize_weights(data_file_b)
@@ -842,16 +980,17 @@ As promised, we now present the generalized version of the model with temperatur
 
 $$P(SR_i|UR_i; w) = \frac{1}{Z_w(UR_i)} exp(- \Sigma_{k=1}^m \frac{w_k f_k(SR_i, UR_i)}{T})$$
 
-where $T$ is the new variable temperature.
-As before, $f_k(SR_i, UR_i)$ is the number of violations of constraint $k$ incurred by mapping underlying $UR_i$ to surface $SR_i$, $Z_w(UR_i)$ is a normalization term defined as 
+where $T$ is the new variable, temperature.
+As before, $m$ is the number of constraints, $w_k$ is the weight of constraint $k$, $f_k(SR_i, UR_i)$ is the number of violations of constraint $k$ incurred by the UR-SR pair <$UR_i, SR_i$>, and $Z_w(UR_i)$ is a normalization term defined as 
 
-$$Z(UR_i) = \Sigma_{y\in \mathcal{Y}(UR_i)} exp(- \Sigma_{k=1}^m \frac{w_k f_k(SR, UR_i)}{T})$$
+$$Z(UR_i) = \Sigma_{SR \in \mathcal{S}(UR_i)} exp(- \Sigma_{k=1}^m \frac{w_k f_k(SR, UR_i)}{T})$$
+where $\mathcal{S}(UR_i)$ is the set of SRs arising from the UR, $UR_i$.
 
 Temperature is a variable whose value the User may adjust only in the `predict_probabilities()` function.
 When using `predict_probabilities()`, if the User doesn't specify a temperature, the value for temperature defaults to 1.
 Similarly for `optimize_weights()`, where there is no argument available for the User to specify temperature, the temperature can be assumed to be 1.
-Thus, all the cases that we've encountered in the preceding sections when we applied `predict_probabilities()` or `optimize_weights()` can be assumed to have $T=1$, since we haven't used the argument `temperature` yet.
-Notice that when $T=1$, the generalized model is equivalent to the simplified one defined in &sect;1.3.
+Thus, all the cases that we've encountered in the preceding sections when we applied `predict_probabilities()` or `optimize_weights()` can be assumed to have $T=1$, since we haven't yet used the argument `temperature`.
+Notice that when $T=1$, the generalized model introduced here is equivalent to the simplified one defined in &sect;1.3.
 
 ## 5.2 The effect of temperature on probability
 **As temperature increases, the probability distribution becomes less polarized.**
@@ -903,14 +1042,25 @@ names(temperature_df) <- c('UR', 'SR', 'T=1', 'T=3', 'T=5')
 temperature_df
 ```
 
-We'll track the predicted probabilities of the outputs of *Input1*.
+We'll track the predicted probabilities of the outputs of *Input1*:
 
-* at $T=1$, 73% *Output1-1*, 27% *Output1-2*
-* at $T=3$, 58% *Output1-1*, 42% *Output1-2*
-* at $T=5$, 55% *Output1-1*, 45% *Output1-2*
+```{r echo=FALSE}
+# Create matrix with 3 columns
+tab <- matrix(c(73, 27, 58, 42, 55, 45), ncol=2, byrow=TRUE)
 
-Thus, as temperature increases, we see that the predicted probabilities of the outputs of a given input become less polarized.
-That is, they move closer towards equiprobability with each other.
+# Define column names and row names of matrix
+colnames(tab) <- c('Output1-1 (%)', 'Output1-2 (%)')
+rownames(tab) <- c('T=1', 'T=3', 'T-5')
+
+# Convert matrix to table 
+tab <- as.table(tab)
+
+# View table 
+tab
+```
+
+Thus, as temperature increases, we see that the predicted distributions over the outputs of a given input become less polarized.
+That is, the probabilities of the various outputs for one given input move closer towards equiprobability with each other.
 Since there are two outputs here, the value that these predicted probabilities move towards is $1/2 = 0.5$.
 If there were three outputs (as with *Input2*), the value that these predicted probabilities move towards would be $1/3 = 0.333$.
 The graphs below visualize the depolarization of the probability distribution over outputs as temperature increases.
@@ -1263,7 +1413,7 @@ Hence, we are not justified in including the additional constraint, C2.
 The model with fewer parameters is the better one.
 
 ### 6.1.2 Likelihood ratio test: Explained
-The likelihood ratio is calculated as follows:
+The likelihood ratio, $LR$, is calculated as follows:
 
 $$LR = 2(LL_2 - LL_1)$$
 
@@ -1287,6 +1437,7 @@ An error message will be produced and no $X^2$-test will be performed if such a 
 The AIC value for a particular model is calculated as follows:
 
 $$AIC = 2k - 2LL$$
+where $k$ is the number of constraints, and $LL$ is the log likelihood of the current model.
 
 A smaller AIC score indicates a better model.
 Both the number of model parameters and log likelihood contribute to the AIC score. 
@@ -1318,129 +1469,8 @@ How much better is the small model compared to the large model?
 The column `aic.wt` gives the probability that the current model is the best one of the entire set of models passed in.
 
 In order to calcualte the `aic.wt` for a model, each model's AIC score has to be converted to a raw AIC weight, $r$. 
-The `aic.wt` for a current model, $w_{aic}$, is just its raw AIC weight normalized over the sum of raw AIC weights of all other models that were passed in. 
+The `aic.wt` for a current model, $w_{aic}$, is just its raw AIC weight normalized over the sum of raw AIC weights of all other models that were passed in to be compared. 
 
 $$w_{aic} = \frac{r}{\sum_{r \in R} r}$$
 
-where $R$ is the set of all raw AIC weights of the models passed in to `compare_models()`.
-
-The raw AIC weight, $r$, is calculated as follows.
-
-$$r = e^{(-\delta/2)}$$
-
-where $\delta$ is the difference between the current model's AIC score and the best model's AIC score.
-$\delta = 0$ for the best model, and $\delta \gt 0$ for the rest of the models.
-Hence, the best model's $r$ is $e^0 = 1$, and the worse models will have $r \lt 1$.
-
-
-## 6.3 Bayesian Information Criterion (BIC)
-### 6.3.1 BIC: Background
-
-The BIC is an alternative measure of assessing the trade-off between the number of parameters and model fit.
-The BIC replaces the AIC's first term ($2k$) with $k \ln(n)$. 
-
-$$BIC = k \ln(n) - 2 LL$$
-
-where $k$ is the number of parameters, $n$ is the sample size, and $LL$ is the log likelihood of the current model.
-
-As with the AIC, a smaller BIC score indicates a better model. 
-
-For both the AIC and the BIC, the first term penalizes models that have more parameters, $k$. 
-However, the number of parameters, $k$, is scaled differently in these two measures.
-For the BIC, $k$ is scaled by $\ln(n)$, where $n$ is the number of samples.
-As the number of observed tokens increases, the penalty accrued by models that have more parameters increases (albeit at a decreasing rate since $k$ is scaled by $\ln(n)$ rather than $n$). 
-In contrast, the AIC scales $k$ with the constant $2$, so sample size has no effect on the penalty accrued by having more parameters, $k$. 
-At $7$ observed tokens and below, a model's BIC score is smaller than its AIC score. 
-At $8$ observed tokens and above, a model's BIC score is larger than its AIC score (since $\ln(7) < 2 < \ln(8)$).
-
-A caveat: Though unlikely to occur, it is advisable to check that the sample size is greater than $1$. At a sample size of $1$, the effect of the number of parameters, $k$, on the BIC score is canceled out. The BIC score becomes directly proportional to the log likelihood alone ($BIC = k \ln(1) -2LL = -2LL$).
-
-``` {r}
-# Compare models using BIC
-compare_models(small_model, large_model, method='bic')
-```
-
-The returned data frame from the BIC method has the same structure as that of the AIC, with one additional column:
-
-* `n`: The number of samples in the data that the model is fit to.
-
-The `bic` and `bic.wt` columns are the BIC counterparts to the `aic` and `aic.wt` columns in the AIC data frame.
-
-Looking at the data frame above, we see that the small model (smaller BIC score) again performs better than the large model (large BIC score). 
-The conditional probability that the small model is the best of all models passed to `compare_models()` is 53.6%.
-
-
-## 6.4 Akaike Information Criterion corrected for small sample size (AIC-C)
-### 6.4.1 AIC-C: Background
-
-The Akaike Information Criterion for small sample sizes (AIC-C) yet another alternative method of comparing the trade-off between the number of parameters and the model fit. 
-Like the BIC, AIC-C also takes sample size into account.
-
-The AIC-C modifies the AIC by introducing a third term. 
-
-$$AIC_c = 2k - 2 LL + \frac{2k^2 + 2k}{n-k-1}$$
-
-As before, *k* is the number of parameters, *n* is the sample size, and *LL* is the log likelihood of the current model.
-This newly introduced third term further increases the cost of having additional parameters.
-As *n* approaches infinity, the third term's denominator approaches 0, so the AIC-C becomes equivalent to the AIC for large sample sizes. 
-
-``` {r}
-# Get paths to toy data files
-# This file has 2 constraints
-small_data_c <- system.file("extdata", "sample_data_file_small_c.txt", package = "maxent.ot")
-
-# This file has 3 constraints
-large_data_c <- system.file("extdata", "sample_data_file_large_c.txt", package = "maxent.ot")
-
-# Fit weights to both data sets 
-small_model_c <- optimize_weights(small_data_c) 
-large_model_c <- optimize_weights(large_data_c)
-
-# Compare models using AIC-C
-compare_models(small_model_c, large_model_c, method='aic_c')
-```
-
-The returned data frame from the AIC-C method has the same structure as that of the BIC.
-The `aicc` and `aicc.wt` columns are the AIC-C counterparts to the `bic` and `bic.wt` columns in the BIC data frame respectively.
-
-In the data frame above, the small model (has smaller AIC-C score) performs better than the large model (has larger AIC-C score). 
-The conditional probability that the small model is the best of all the models that were passed to `compare_models()` is $97.4%$.
-
-### 6.4.2 A potential pitfall
-When $n-k \le 1$ for a particular model, its AIC-C value is infinitely large.
-In the example below, this is true of both the large and the small models.
-One way to side-step this issue is to scale the sample size up. 
-For example, the problematic data set below had its sample size increased by a factor of 2 to create the non-problematic data set above.
-
-``` {r}
-# Problematic data set: all models have n-k <= 1
-
-# Compare models using AIC-C
-compare_models(small_model, large_model, method='aic_c')
-```
-
-In the data frame above, none of the models produce a valid AIC-C score.
-Hence the probability that one particular model is the best cannot be calculated (`aicc.wt` is NaN).
-
-In the case where only one of multiple models produces an invalid AIC-C score, the model with the invalid AIC-C score will have an `aicc.wt` of 0.
-The `aicc.wt` for the other models with valid AIC-C scores will be calculated as per normal (see data frame below).
-
-``` {r}
-# Problematic data set: one model has n-k <= 1
-
-# Get paths to toy data files
-# This file has 2 constraints
-small_data_b <- system.file("extdata", "sample_data_file_small_b.txt", package = "maxent.ot")
-# This file has 3 constraints
-med_data_b <- system.file("extdata", "sample_data_file_med_b.txt", package = "maxent.ot")
-# This file has 4 constraints
-large_data_b <- system.file("extdata", "sample_data_file_large_b.txt", package = "maxent.ot")
-
-# Fit weights for all data sets 
-small_model_b <- optimize_weights(small_data_b)
-med_model_b <- optimize_weights(med_data_b)
-large_model_b <- optimize_weights(large_data_b)
-
-# Compare models using AIC-C
-compare_models(small_model_b, med_model_b, large_model_b, method='aic_c')
-```
+where $R$ is the set of all raw AIC weights of the models p
