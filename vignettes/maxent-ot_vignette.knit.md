@@ -7,18 +7,17 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>",
-  warning=FALSE
-)
-```
 
-```{r setup}
+
+
+```r
 # Import packages
 library(maxent.ot)
 library(ggplot2)    # For plots
+#> Registered S3 methods overwritten by 'tibble':
+#>   method     from  
+#>   format.tbl pillar
+#>   print.tbl  pillar
 ```
 
 # 1 Overview
@@ -45,9 +44,10 @@ We now present a quick recap of OT in order to illustrate how OT and MaxEnt diff
 In OT, ranked constraints choose one winning SR candidate per UR.
 Consider the OT tableaux below (*Figure 1*).
 
-```{r, echo=FALSE, fig.cap="Fig 1: Two OT tableaux.", out.width = '40%'}
-knitr::include_graphics("../man/figures/OT_tableau.JPG")
-```
+<div class="figure">
+<img src="../man/figures/OT_tableau.JPG" alt="Fig 1: Two OT tableaux." width="40%" />
+<p class="caption">Fig 1: Two OT tableaux.</p>
+</div>
 
 For the UR /ur-1/, Con1 prefers [sr1-1] while Con2 prefers [sr1-2].
 Since Con1 outranks Con2, [sr1-1] is the sole winner, and is predicted to be the only SR for this particular UR (*i.e.* a categorical outcome).
@@ -76,9 +76,10 @@ where $\mathcal{S}(UR_i)$ is the set of surface realizations of input $UR_i$.
 ## 1.4 Calculating MaxEnt probabilities: Step-by-step
 We'll walk through the MaxEnt tableaux in *Figure 2* to illustrate how the equations in &sect;1.3 are applied to calculate the probability of a particular UR-SR pair.
 
-```{r, echo=FALSE, fig.cap="Fig 2: Two MaxEnt tableaux.", out.width = '85%'}
-knitr::include_graphics("../man/figures/maxEnt_tableau_5.jpg")
-```
+<div class="figure">
+<img src="../man/figures/maxEnt_tableau_5.jpg" alt="Fig 2: Two MaxEnt tableaux." width="85%" />
+<p class="caption">Fig 2: Two MaxEnt tableaux.</p>
+</div>
 
 Notice that these two MaxEnt tableaux have the same URs, SRs, constraints, and constraint violation profiles as the two OT tableaux above.
 However, instead of being ranked, these constraints now have weights (*e.g.* Con1 weight = 1.6; Con2 weight = 0.8).
@@ -178,26 +179,12 @@ The graph below visualizes how a MaxEnt score varies with penalty (*Figure 3*).
 Essentially, a higher penalty results in a lower MaxEnt score.
 (Note: It is not possible to graph how probability varies with penalty, since the actual probability depends on the penalties of the other SRs arising from the same UR, so we'll use the MaxEnt score as an intermediary.)
 
-``` {r, echo=FALSE, fig.cap="Fig 3: How MaxEnt score varies with penalty.", out.width = '85%'}
-knitr::include_graphics("../man/figures/MaxEnt_vs_penalty.jpg")
-```
+<div class="figure">
+<img src="../man/figures/MaxEnt_vs_penalty.jpg" alt="Fig 3: How MaxEnt score varies with penalty." width="85%" />
+<p class="caption">Fig 3: How MaxEnt score varies with penalty.</p>
+</div>
 
-``` {r, include=FALSE}
-# This creates the .jpg image for the graph in the chunk above.
-# Ideally, use this (i.e. create graph rather than use an image)...
-# ...but this currently renders small plot & ugly big spaces for labels
 
-# Hack to set up window
-curve(exp(-x), from=0, to=5,
-      col="white", xlab="penalty", ylab="MaxEnt score")    
-
-# Add horizontal & vertical lines at y=0 & x=0
-abline(h=0, col="gray")
-abline(v=0, col="gray")
-
-# Extend curve to to R-edge of window
-curve(exp(-x), from=0, to=5.25, col="blue", add=TRUE)      
-```
 
 Recall that the probability of an SR given its UR is directly proportional to its MaxEnt score:
 
@@ -233,7 +220,8 @@ Let's imagine we have a data set with multiple tableaux, and would like to find 
 In order to do that, we first need to know how to structure our data set.
 Take a look at the data set below, loaded from the `sample_data_file` data set included in this package. 
 
-```{r}
+
+```r
 # Get paths to sample data file
 data_file <- system.file(
   "extdata", "sample_data_file.txt", package = "maxent.ot"
@@ -241,6 +229,13 @@ data_file <- system.file(
 
 # Take a look at the structure of the sample data
 read.table(data_file, header=FALSE, sep='\t')
+#>       V1        V2 V3          V4          V5
+#> 1                  NA Constraint1 Constraint2
+#> 2                  NA          C1          C2
+#> 3 Input1 Output1-1  1           1           0
+#> 4        Output1-2  1           0           1
+#> 5 Input2 Output2-1  1           0           0
+#> 6        Output2-2  0           0           1
 ```
 
 This data set has two tableaux: one for Input1 and another for Input2. 
@@ -266,15 +261,35 @@ The Reader may notice that the input file is in fact prepared in an OTSoft-style
 Now that we've familiarized ourselves with our data set, let's find a set of constraint weights that maximizes the likelihood of the data.
 
 Using the function `optimize_weights()`, we'll train a model for the data set above, and store the result (our trained model) in the object `simple_model`:
-```{r dataForSimpleCase}
+
+```r
 # Fit weights to data
 simple_model <- optimize_weights(data_file)
 ```
 
 Let's take a closer look at our object `simple_model`:
-``` {r}
+
+```r
 # View the model we've fit (no biases used)
 simple_model
+#> $name
+#> [1] "sample_data_file"
+#> 
+#> $weights
+#> Constraint1 Constraint2 
+#>    14.20336    14.20341 
+#> 
+#> $loglik
+#> [1] -1.386295
+#> 
+#> $k
+#> [1] 2
+#> 
+#> $n
+#> [1] 3
+#> 
+#> $bias_params
+#> [1] NA
 ```
 
 The object `simple_model` has 4 relevant named attributes:
@@ -288,18 +303,23 @@ The object `simple_model` has 4 relevant named attributes:
 ## 2.2.1 Retrieving specific model attributes 
 We can retrieve any specific model attribute that we'd like.   
 For example, if we'd like to see only the learned constraint weights for `simple_model`, we can pull them up as follows:
-```{r simpleModelWeight}
+
+```r
 # Get learned weights of model we've fit (no biases used)
 simple_model$weights
+#> Constraint1 Constraint2 
+#>    14.20336    14.20341
 ```
 
 Here we see that the trained model happened to learn the same weight (14.2) for both Constraint1 and Constraint2.
 
 Likewise, we can retrieve any other model attribute. For example, here's the log likelihood:
 
-```{r simpleModelLL}
+
+```r
 # Get log likelihood of model we've fit (no biases used)
 simple_model$loglik
+#> [1] -1.386295
 ```
 
 This log likelihood is, in fact, at ceiling (at the maximum possible likelihood), which is indicative of overfitting.
@@ -368,9 +388,10 @@ In the absence of priors, learner's sole goal is to maximize the log likelihood 
 In other words, the learner seeks to produce a distribution over these three training examples that matches the observed distribution as closely as possible. 
 The learner adjusts the weights with this goal in mind.
 
-```{r, echo=FALSE, fig.cap="Table 1: Log likelihood of data under weights of M1 & M2.", out.width = '85%'}
-knitr::include_graphics("../man/figures/logLike_table.jpg")
-```
+<div class="figure">
+<img src="../man/figures/logLike_table.jpg" alt="Table 1: Log likelihood of data under weights of M1 &amp; M2." width="85%" />
+<p class="caption">Table 1: Log likelihood of data under weights of M1 & M2.</p>
+</div>
 
 <!-- |Input|Output|Freq|Observed P(Output\|Input)|M1|M2| -->
 <!-- |:---|---|---:|---:|---:|---:| -->
@@ -487,7 +508,8 @@ The arguments are:
 
 To use the argument `bias_file`, pass in a `.txt` file with the structure below.
 
-``` {r}
+
+```r
 # Get paths to toy data and bias files.
 data_file <- system.file(
   "extdata", "sample_data_file.txt", package = "maxent.ot"
@@ -498,6 +520,9 @@ bias_file <- system.file(
 
 # Take a look at the structure of the bias_file
 read.table(bias_file, header=FALSE, sep='\t')
+#>   V1 V2 V3
+#> 1 C1  0 10
+#> 2 C2  0 10
 ```
 
 The bias file is a tab-delimited `.txt` file.
@@ -508,9 +533,30 @@ However, if the User so wishes, they may specify different values of $\mu$ for d
 The same applies to $\sigma$.
 Below, we fit weights with the biases specified in a file.
 
-``` {r}
+
+```r
 # Fit weights with biases specified in file
 optimize_weights(data_file, bias_file)
+#> $name
+#> [1] "sample_data_file"
+#> 
+#> $weights
+#> Constraint1 Constraint2 
+#>    2.770163    2.825580 
+#> 
+#> $loglik
+#> [1] -1.522935
+#> 
+#> $k
+#> [1] 2
+#> 
+#> $n
+#> [1] 3
+#> 
+#> $bias_params
+#>    mus sigmas
+#> 1:   0     10
+#> 2:   0     10
 ```
 
 The arguments `mu_vector` and `sigma_vector` allow us to specify biases in vector form.
@@ -519,38 +565,102 @@ The same applies to $\sigma$.
 Below, we fit weights with the bias parameters specified in vector form.
 For each `..._vector` argument, we have to combine the individual parameter values into a vector using the `c()` function (*e.g.* `c(100, 200)`).
 
-``` {r}
+
+```r
 # Fit weights with biases specified in vector form
 optimize_weights(
   data_file, mu_vector = c(1, 2), sigma_vector = c(100, 200)
 )
+#> $name
+#> [1] "sample_data_file"
+#> 
+#> $weights
+#> Constraint1 Constraint2 
+#>    7.194575    7.195788 
+#> 
+#> $loglik
+#> [1] -1.3893
+#> 
+#> $k
+#> [1] 2
+#> 
+#> $n
+#> [1] 3
+#> 
+#> $bias_params
+#>    mus sigmas
+#> 1:   1    100
+#> 2:   2    200
 ```
 
 The arguments `mu_scalar` and `sigma_scalar` allow us to specify the bias parameter values just once for all constraints.
 This is useful when all constraints share the same ideal weight, $\mu$, or when they all share the same tolerance for weight discrepancy, $\sigma$.
 Below, we fit weights with the bias parameters specified in scalar form.
 
-``` {r}
+
+```r
 # Fit weights with biases specified as scalars
 optimize_weights(
   data_file, mu_scalar = 0, sigma_scalar = 1000
 )
+#> $name
+#> [1] "sample_data_file"
+#> 
+#> $weights
+#> Constraint1 Constraint2 
+#>    10.74752    10.74755 
+#> 
+#> $loglik
+#> [1] -1.386431
+#> 
+#> $k
+#> [1] 2
+#> 
+#> $n
+#> [1] 3
+#> 
+#> $bias_params
+#>    mus sigmas
+#> 1:   0   1000
+#> 2:   0   1000
 ```
 
 A mix of scalar and vector biases is also possible: 
-``` {r}
+
+```r
 # Fit weights with a mix of scalar and vector biases
 optimize_weights(
   data_file, mu_vector = c(1, 2), sigma_scalar = 1000
 )
+#> $name
+#> [1] "sample_data_file"
+#> 
+#> $weights
+#> Constraint1 Constraint2 
+#>    10.88319    10.88321 
+#> 
+#> $loglik
+#> [1] -1.386401
+#> 
+#> $k
+#> [1] 2
+#> 
+#> $n
+#> [1] 3
+#> 
+#> $bias_params
+#>    mus sigmas
+#> 1:   1   1000
+#> 2:   2   1000
 ```
 
 Any combination of arguments can be used to specify the bias parameters.
 The User, however, is advised that when multiple values are specified for the same parameter, the algorithm decides which one to use according to the chart in *Figure 4*.
 
-```{r, echo=FALSE, fig.cap="Fig 4: Hierarchy for choosing which bias parameters to use when conflicts arise. Parent over-writes child.", out.width = '25%'}
-knitr::include_graphics("../man/figures/bias_param_hierarchy.jpg")
-```
+<div class="figure">
+<img src="../man/figures/bias_param_hierarchy.jpg" alt="Fig 4: Hierarchy for choosing which bias parameters to use when conflicts arise. Parent over-writes child." width="25%" />
+<p class="caption">Fig 4: Hierarchy for choosing which bias parameters to use when conflicts arise. Parent over-writes child.</p>
+</div>
 
 In this chart, the argument above takes precedence over the one(s) it dominates.
 For example, if the User passes in both a file for `bias_file` and a separate value for `mu_scalar`, the parameter values specified in `bias_file` will be used and the one specified in `mu_scalar` will be ignored. 
@@ -563,18 +673,28 @@ If only one of the two bias parameters is present, an error will be raised.
 ## 3.3 Overfitting & regularization
 ### 3.3.1 Ceiling log likelihood
 In &sect;2.2 we noted that the log likelihood attained by `simple_model` was in fact at ceiling.
-``` {r}
+
+```r
 # Get log likelihood of simple model (no biases)
 simple_model$loglik
+#> [1] -1.386295
 ```
 
 Each data set has a theoretical maximum log likelihood, which can be calculated.
 Recall that the data set had 3 data points (*i.e.* observed outputs). 
 (Frequency shows up in the third column.)
 
-``` {r}
+
+```r
 # View the data that was used to train `simple_model`
 read.table(data_file, header=FALSE, sep='\t')
+#>       V1        V2 V3          V4          V5
+#> 1                  NA Constraint1 Constraint2
+#> 2                  NA          C1          C2
+#> 3 Input1 Output1-1  1           1           0
+#> 4        Output1-2  1           0           1
+#> 5 Input2 Output2-1  1           0           0
+#> 6        Output2-2  0           0           1
 ```
 
 * For Input1, there were 2 outputs, each of which surfaced once. 
@@ -613,7 +733,8 @@ This means that we believe that every constraint should:
   * Have standard deviation = 1
 
 Since every constraint has the same ideal weight & the same standard deviation (tolerance for weight discrepancy), we can make use of the optional arguments `mu_scalar` & `sigma_scalar` to input $\mu$ and $\sigma$ just once for all constraints.
-```{r scalarBiases}
+
+```r
 # Train regularized model with mu_scalar=0 & sigma_scalar=1
 regularized_model <- optimize_weights(
   data_file, mu_scalar=0, sigma_scalar=1
@@ -621,24 +742,52 @@ regularized_model <- optimize_weights(
 ```
 
 Inspecting the trained regularized model, we now see a value for the attribute `bias_params`:
-```{r}
+
+```r
 # Take a took at the regularized model trained with scalar biases
 regularized_model
+#> $name
+#> [1] "sample_data_file"
+#> 
+#> $weights
+#> Constraint1 Constraint2 
+#>   0.1051951   0.3163665 
+#> 
+#> $loglik
+#> [1] -2.000422
+#> 
+#> $k
+#> [1] 2
+#> 
+#> $n
+#> [1] 3
+#> 
+#> $bias_params
+#>    mus sigmas
+#> 1:   0      1
+#> 2:   0      1
 ```
 
 We can retrieve this attribute alone:
-```{r}
+
+```r
 # View the bias parameters we used during model training
 regularized_model$bias_params
+#>    mus sigmas
+#> 1:   0      1
+#> 2:   0      1
 ```
 
 Constraints are ordered in rows.
 The first column gives the $\mu$ and the second column the $\sigma$ for the constraint in question.
 
 Let's take a look at the trained weights for the regularized model:
-```{r biasModelAttributes}
+
+```r
 # Get learned weights for the regularized model trained with scalar biases
 regularized_model$weights
+#> Constraint1 Constraint2 
+#>   0.1051951   0.3163665
 ```
 The trained regularized model has learned that Constraint 1 has weight = 0.105, and Constraint 2 has weight = 0.316.
 Notice that the weights for both constraints are now closer to 0 (*cf.* the unbiased model where trained weights for both constraints were 14.2).
@@ -647,7 +796,8 @@ In particular the price to be paid increased the further a constraint's weight w
 
 Notice also that the log likelihood of data under the weights of the regularized model is below the ceiling of $-1.386$ ($-1.945 < -1.386$):
 
-```{r}
+
+```r
 # Calculate log likelihood of regularized model trained with scalar biases
 
 # Use regularized model's weights to get predicted probabilities
@@ -672,6 +822,7 @@ print(
   paste("The log likelihood of data under weights of regularized model is:", 
         sprintf(actual_logLike, fmt = '%#.3f'))
 )
+#> [1] "The log likelihood of data under weights of regularized model is: -1.945"
 ```
 
 Be aware that since the regularized model uses the bias term, the objective function is no longer equivalent to the log likelihood.
@@ -681,9 +832,11 @@ Since the trained weights (0.105 & 0.316) aren't at the ideal weights (0 & 0), t
 So, we expect the value of the objective function to be smaller than the value of the log likelihood, since a price must be paid for these non-ideal weights.
 We can retrieve the value of the objective function like so:
 
-```{r biasModelObjFn}
+
+```r
 # Get value of objective function for trained regularized model 
 regularized_model$loglik
+#> [1] -2.000422
 ```
 
 Note that `loglik` returns the value of the objective function $O(w)$ (rather than the log likelihood $LL_w(D)$), despite its name.
@@ -695,11 +848,13 @@ O(w) &= LL_w(D) - B(w) \\
 B(w) &= LL_w(D) - O(w)
 \end{align}
 
-``` {r}
+
+```r
 # Calculate value of the bias term for trained regularized model
 bias_term <- actual_logLike - regularized_model$loglik
 
 bias_term
+#> [1] 0.05557687
 ```
 
 **Retrieving the weight of 1 constraint**
@@ -708,7 +863,8 @@ Let's imagine that we're only interested in a tracking the weight of a subset of
 For example, we're interested only in Constraint 1, and want to track the weight learned for this constraint in the unbiased and the simple bias (regularized) model.
 We use index `1` to pick out the first constraint from the named list `your_model_name$weights`.
 Similarly, if we were interested in the second constraint, we'd use index `2`, and so on.
-```{r}
+
+```r
 # Get weight of Constraint 1 (simple model)
 cons1_noBias <- simple_model$weights[1]
 
@@ -719,8 +875,10 @@ cons1_simpleBias <- regularized_model$weights[1]
 # ...and in the regularized one
 print(paste("In the unbiased model, Constraint 1's  weight is:", 
             sprintf(cons1_noBias, fmt = '%#.3f')))
+#> [1] "In the unbiased model, Constraint 1's  weight is: 14.203"
 print(paste("In the regularized model, Constraint 1's  weight is:", 
             sprintf(cons1_simpleBias, fmt = '%#.3f')))
+#> [1] "In the regularized model, Constraint 1's  weight is: 0.105"
 ```
 
 ## 3.4 Incorporating substantive effects
@@ -744,19 +902,11 @@ That is, for those trained on the p&rarr;v alternation, the b&rarr;v alternation
 
 Extension to untrained sounds occurred more frequently in the experimental condition (trained on p&rarr;v; extended to b&rarr;v) at 73% than in the control condition (trained on b&rarr;v; extended to p&rarr;v) at 20%. The percentage alternation by participants in the response phase is shown below. 
 
-```{r echo=FALSE}
-# Create matrix with 3 columns
-tab <- matrix(c(95, 90, 73, 20), ncol=2, byrow=TRUE)
 
-# Define column names and row names of matrix
-colnames(tab) <- c('Expt cdn', 'Control cdn')
-rownames(tab) <- c('trained', 'untrained')
-
-# Convert matrix to table 
-tab <- as.table(tab)
-
-# View table 
-tab
+```
+#>           Expt cdn Control cdn
+#> trained         95          90
+#> untrained       73          20
 ```
 
 Given that the perceptual distance between [b] & [v] is smaller than that between [p] & [v], substantive effects arising from perceptual distance appear to play an important role.
@@ -777,7 +927,8 @@ These have a preferred weight of 0 to reflect that intervocalic stops and voicel
 
 The training data for the experimental condition includes only the p&rarr;v alternation, reflecting the training phase encountered by the subjects in the experimental condition:
 
-```{r}
+
+```r
 # Get path to data file (experimental condition)
 white_salt_data_file <- system.file(
   "extdata", "sample_whiteSalt_data_file.txt", package = "maxent.ot"
@@ -785,6 +936,12 @@ white_salt_data_file <- system.file(
 
 # View training data (experimental condition)
 read.table(white_salt_data_file, header=FALSE, sep='\t')
+#>    V1  V2 V3         V4        V5        V6        V7
+#> 1         NA *V[-cont]V *V[-voi]V *Map(b-v) *Map(p-v)
+#> 2         NA        Mk1       Mk2       Mp1       Mp2
+#> 3 VpV VpV  0          1         1         0         0
+#> 4     VbV  0          1         0         0         0
+#> 5     VvV 18          0         0         0         1
 ```
 
 We now train the bias model for the experimental condition, making use of the argument `mu_vector`.
@@ -792,7 +949,8 @@ We want the value of $\mu$ to be 0, 0, 1.3 and 3.65 for the four ordered constra
 We have to combine these four values into a vector using the `c()` function (*i.e.* `c(0, 0, 1.3, 3.65)`).
 Here, we choose to have the same tolerance for deviation from the preferred weight for all constraints, so we'll use the argument `sigma_scalar`.
 
-```{r}
+
+```r
 # Fit model with preferred weights for experimental condition
 white_salt_bias_model = optimize_weights(
   white_salt_data_file, mu_vector=c(0, 0, 1.3, 3.65), sigma_scalar=sqrt(0.6)
@@ -800,12 +958,15 @@ white_salt_bias_model = optimize_weights(
 
 # View trained weights (expt cdn with bias)
 white_salt_bias_model$weights
+#> *V[-cont]V  *V[-voi]V  *Map(b-v)  *Map(p-v) 
+#>  2.5877273  0.8014479  1.3000000  1.0622343
 ```
 
 Now let's train an unbiased model for the same experimental condition. 
 We'll average out the preferred weights for the two *Map constraints, which results in each of these constraint having preferred weight = 2.27.
 
-```{r}
+
+```r
 # Fit unbiased model for experimental condition
 white_salt_noBias_model = optimize_weights(
   white_salt_data_file, 
@@ -814,6 +975,8 @@ white_salt_noBias_model = optimize_weights(
 
 # View trained weights (expt cdn, no bias)
 white_salt_noBias_model$weights
+#> *V[-cont]V  *V[-voi]V  *Map(b-v)  *Map(p-v) 
+#>  2.0607950  0.6888777  2.2700000  0.2091821
 ```
 
 At this point, we've essentially trained the model on only the p&rarr;v alternation.
@@ -825,7 +988,8 @@ We'll pass both the models trained above as well as the new test file to the fun
 We'll take a closer look at both the function `predict_probabilities()`, and the structure of the test file when we introduce `predict_probabilities()` in &sect;4 below.
 For now, we'll just focus our attention on the predicted probability calculated by this function.
 
-```{r}
+
+```r
 # Get path to test file (experimental condition)
 white_salt_test_file <- system.file(
   "extdata", "sample_whiteSalt_test_file.txt", package = "maxent.ot"
@@ -833,34 +997,53 @@ white_salt_test_file <- system.file(
 
 # View test data (experimental condition)
 read.table(white_salt_test_file, header=FALSE, sep='\t')
+#>    V1  V2   V3         V4        V5        V6        V7
+#> 1           NA *V[-cont]V *V[-voi]V *Map(b-v) *Map(p-v)
+#> 2           NA        Mk1       Mk2       Mp1       Mp2
+#> 3 VpV VpV 0.05          1         1         0         0
+#> 4     VvV 0.95          0         0         0         1
+#> 5 VbV VbV 0.27          1         0         0         0
+#> 6     VvV 0.73          0         0         1         0
 
 # Predict probabilities with weights trained with bias (expt cdn)
 predict_probabilities(
   white_salt_test_file, white_salt_bias_model$weights
 )
+#>     UR  SR Freq *V[-cont]V *V[-voi]V *Map(b-v) *Map(p-v) Predicted Probability
+#> 1: VpV VpV 0.05          1         1         0         0            0.08891617
+#> 2: VpV VvV 0.95          0         0         0         1            0.91108383
+#> 3: VbV VbV 0.27          1         0         0         0            0.21623773
+#> 4: VbV VvV 0.73          0         0         1         0            0.78376227
+#>    Observed Probability Error
+#> 1:                 0.05     0
+#> 2:                 0.95    -1
+#> 3:                 0.27     0
+#> 4:                 0.73     1
 
 # Predict probabilities with weights trained without bias (expt cdn)
 predict_probabilities(
   white_salt_test_file, white_salt_noBias_model$weights
 )
+#>     UR  SR Freq *V[-cont]V *V[-voi]V *Map(b-v) *Map(p-v) Predicted Probability
+#> 1: VpV VpV 0.05          1         1         0         0            0.07306794
+#> 2: VpV VvV 0.95          0         0         0         1            0.92693206
+#> 3: VbV VbV 0.27          1         0         0         0            0.55211134
+#> 4: VbV VvV 0.73          0         0         1         0            0.44788866
+#>    Observed Probability Error
+#> 1:                 0.05     0
+#> 2:                 0.95    -1
+#> 3:                 0.27     0
+#> 4:                 0.73     1
 ```
 
 For ease of reference, the predicted percentage of alternation for the trained biased and unbiased models are summarized in the table below:
 
-```{r echo=FALSE}
-# Create matrix with 3 columns
-tab <- matrix(c(91, 93, 78, 45), ncol=2, byrow=TRUE)
 
-# Define column names and row names of matrix
-colnames(tab) <- c('Biased model', 'Unbiased model')
-rownames(tab) <- c('Trained (95%)', 'Untrained (73%)')
-
-# Convert matrix to table 
-tab <- as.table(tab)
-
-# View table 
-print("Predicted % of alternation during response phase (experimental condition)")
-tab
+```
+#> [1] "Predicted % of alternation during response phase (experimental condition)"
+#>                 Biased model Unbiased model
+#> Trained (95%)             91             93
+#> Untrained (73%)           78             45
 ```
 
 Recall that during the response phase, participants performed the following two alternations at the following rates:
@@ -879,7 +1062,8 @@ In particular, the untrained [b] &rarr; [v] alternation appeared to be close to 
 Let's now train a biased and an unbiased model for the control condition. 
 The training data includes only the b&rarr;v alternation, reflecting the training phase of the control condition:
 
-```{r}
+
+```r
 # Get path to data file (control condition)
 white_control_data_file <- system.file(
   "extdata", "sample_whiteCtrl_data_file.txt", package = "maxent.ot"
@@ -887,6 +1071,12 @@ white_control_data_file <- system.file(
 
 # View training data (control condition)
 read.table(white_control_data_file, header=FALSE, sep='\t')
+#>    V1  V2 V3         V4        V5        V6        V7
+#> 1         NA *V[-cont]V *V[-voi]V *Map(b-v) *Map(p-v)
+#> 2         NA        Mk1       Mk2       Mp1       Mp2
+#> 3 VbV VpV  0          1         1         0         0
+#> 4     VbV  0          1         0         0         0
+#> 5     VvV 18          0         0         1         0
 
 # Fit model with preferred weights for control condition
 white_control_bias_model = optimize_weights(
@@ -896,6 +1086,8 @@ white_control_bias_model = optimize_weights(
 
 # View trained weights (control cdn with bias)
 white_control_bias_model$weights
+#> *V[-cont]V  *V[-voi]V  *Map(b-v)  *Map(p-v) 
+#>  1.9372215  0.6600614  0.0000000  3.6500000
 
 # Fit unbiased model for control condition
 white_control_noBias_model = optimize_weights(
@@ -905,11 +1097,14 @@ white_control_noBias_model = optimize_weights(
 
 # View trained weights (control cdn, no bias)
 white_control_noBias_model$weights
+#> *V[-cont]V  *V[-voi]V  *Map(b-v)  *Map(p-v) 
+#>  2.0607950  0.6888777  0.2091821  2.2700000
 ```
 
 As with the experimental condition above, we'll now subject the two trained models to the response phase, which includes the test (b&rarr;v) and extension (p&rarr;v) tasks.
 
-```{r}
+
+```r
 # Get path to test file (control condition)
 white_control_test_file <- system.file(
   "extdata", "sample_whiteCtrl_test_file.txt", package = "maxent.ot"
@@ -917,34 +1112,53 @@ white_control_test_file <- system.file(
 
 # View test data (control condition)
 read.table(white_control_test_file, header=FALSE, sep='\t')
+#>    V1  V2  V3         V4        V5        V6        V7
+#> 1          NA *V[-cont]V *V[-voi]V *Map(b-v) *Map(p-v)
+#> 2          NA        Mk1       Mk2       Mp1       Mp2
+#> 3 VpV VpV 0.8          1         1         0         0
+#> 4     VvV 0.2          0         0         0         1
+#> 5 VbV VbV 0.1          1         0         0         0
+#> 6     VvV 0.9          0         0         1         0
 
 # Predict probabilities with weights trained with bias (control cdn)
 predict_probabilities(
   white_control_test_file, white_control_bias_model$weights
 )
+#>     UR  SR Freq *V[-cont]V *V[-voi]V *Map(b-v) *Map(p-v) Predicted Probability
+#> 1: VpV VpV  0.8          1         1         0         0             0.7412963
+#> 2: VpV VvV  0.2          0         0         0         1             0.2587037
+#> 3: VbV VbV  0.1          1         0         0         0             0.1259534
+#> 4: VbV VvV  0.9          0         0         1         0             0.8740466
+#>    Observed Probability Error
+#> 1:                  0.8     0
+#> 2:                  0.2    -1
+#> 3:                  0.1     0
+#> 4:                  0.9     1
 
 # Predict probabilities with weights trained with bias (control cdn)
 predict_probabilities(
   white_control_test_file, white_control_noBias_model$weights
 )
+#>     UR  SR Freq *V[-cont]V *V[-voi]V *Map(b-v) *Map(p-v) Predicted Probability
+#> 1: VpV VpV  0.8          1         1         0         0             0.3823294
+#> 2: VpV VvV  0.2          0         0         0         1             0.6176706
+#> 3: VbV VbV  0.1          1         0         0         0             0.1356836
+#> 4: VbV VvV  0.9          0         0         1         0             0.8643164
+#>    Observed Probability Error
+#> 1:                  0.8     0
+#> 2:                  0.2    -1
+#> 3:                  0.1     0
+#> 4:                  0.9     1
 ```
 
 For ease of reference, the predicted percentage of alternation for the trained biased and unbiased models are presented in the table below:
 
-```{r echo=FALSE}
-# Create matrix with 3 columns
-tab <- matrix(c(87, 87, 26, 61), ncol=2, byrow=TRUE)
 
-# Define column names and row names of matrix
-colnames(tab) <- c('Biased model', 'Unbiased model')
-rownames(tab) <- c('Trained (90%)', 'Untrained (20%)')
-
-# Convert matrix to table 
-tab <- as.table(tab)
-
-# View table 
-print("Predicted % of alternation during response phase (control condition)")
-tab
+```
+#> [1] "Predicted % of alternation during response phase (control condition)"
+#>                 Biased model Unbiased model
+#> Trained (90%)             87             87
+#> Untrained (20%)           26             61
 ```
 
 During the testing phase, participants performed the following two alternations at the following rates:
@@ -978,7 +1192,8 @@ The function `predict_probabilities()` requires at the very least, the following
 Let's imagine that we want to make a prediction using the weights of a model that we've trained using `optimize_weights()`.
 If we've trained a model using `optimize_weights()` and stored the trained model in the object `fit_model`, we can specify the constraint weights by passing in the `weights` attribute of the model: `fit_model$weights`. 
 
-``` {r}
+
+```r
 # Get paths to toy data file 
 data_file_a <- system.file(
   "extdata", "sample_data_file.txt", package="maxent.ot"
@@ -989,6 +1204,16 @@ fit_model_a <- optimize_weights(data_file_a)
 
 # Predict probabilities for the same input 
 predict_probabilities(data_file_a, fit_model_a$weights)
+#>        UR        SR Freq Constraint1 Constraint2 Predicted Probability
+#> 1: Input1 Output1-1    1           1           0          5.000115e-01
+#> 2: Input1 Output1-2    1           0           1          4.999885e-01
+#> 3: Input2 Output2-1    1           0           0          9.999993e-01
+#> 4: Input2 Output2-2    0           0           1          6.784809e-07
+#>    Observed Probability         Error
+#> 1:                  0.5  1.153963e-05
+#> 2:                  0.5 -1.153963e-05
+#> 3:                  1.0 -6.784809e-07
+#> 4:                  0.0  6.784809e-07
 ```
 
 The structure of the returned object is as follows:
@@ -1013,7 +1238,8 @@ The first participant picked *Output1-1* for *Input1* and *Output2-1* for *Input
 The second participant picked *Output1-2* for *Input1* and failed to respond for *Input2*.
 We thus get the frequencies below (data_file_b).
 
-``` {r}
+
+```r
 # Data has repeated URs (absolute frequency)
 # Get paths to toy data file
 data_file_b <- system.file(
@@ -1022,21 +1248,52 @@ data_file_b <- system.file(
 
 # Take a look at the structure of the sample data with duplicate URs
 read.table(data_file_b, header=FALSE, sep='\t')
+#>       V1        V2 V3          V4          V5
+#> 1                  NA Constraint1 Constraint2
+#> 2                  NA          C1          C2
+#> 3 Input1 Output1-1  1           1           0
+#> 4        Output1-2  0           0           1
+#> 5 Input2 Output2-1  1           0           0
+#> 6        Output2-2  0           0           1
+#> 7 Input1 Output1-1  0           1           0
+#> 8        Output1-2  1           0           1
 
 # Here's the structure of the same data without duplicate URs
 read.table(data_file_a, header=FALSE, sep='\t')
+#>       V1        V2 V3          V4          V5
+#> 1                  NA Constraint1 Constraint2
+#> 2                  NA          C1          C2
+#> 3 Input1 Output1-1  1           1           0
+#> 4        Output1-2  1           0           1
+#> 5 Input2 Output2-1  1           0           0
+#> 6        Output2-2  0           0           1
 ```
 
 Notice that both `data_file_a` and `data_file_b` describe the same data, albeit in a different manner.
 If we'd collapsed all instances of repeated URs from `data_file_b`, we'd the get `data_file_a`.
 However, the resulting `Error` from both data sets differ.
 
-``` {r}
+
+```r
 # Fit weights to data (no biases)
 fit_model_b <- optimize_weights(data_file_b)
 
 # Predict probabilities for the same input (duplicate URs)
 predict_probabilities(data_file_b, fit_model_b$weights)
+#>        UR        SR Freq Constraint1 Constraint2 Predicted Probability
+#> 1: Input1 Output1-1    1           1           0          2.500060e-01
+#> 2: Input1 Output1-2    0           0           1          2.499940e-01
+#> 3: Input2 Output2-1    1           0           0          9.999993e-01
+#> 4: Input2 Output2-2    0           0           1          6.783349e-07
+#> 5: Input1 Output1-1    0           1           0          2.500060e-01
+#> 6: Input1 Output1-2    1           0           1          2.499940e-01
+#>    Observed Probability         Error
+#> 1:                  0.5 -2.499940e-01
+#> 2:                  0.0  2.499940e-01
+#> 3:                  1.0 -6.783349e-07
+#> 4:                  0.0  6.783349e-07
+#> 5:                  0.0  2.500060e-01
+#> 6:                  0.5 -2.500060e-01
 ```
 
 Interpreting the `Error` for `data_file_a` is straightforward, while the `Error` for `data_file_b` is uninterpretable.
@@ -1052,7 +1309,8 @@ Below, we demonstrate how to prepare these weights so that they'll be compatible
 
 Let's say we want to make predictions with Con1's weight being 1.5 and Con2's weight being 2.5.
 We have to put these weights into a list, and convert it to the appropriate type.
-``` {r}
+
+```r
 # Get predictions with User-chosen constraint weights
 # Make a list of weights
 # Be sure to order the weights in exactly the same order...
@@ -1061,13 +1319,24 @@ my_wt_ls <- list(1.5, 2.5)
 
 # Convert to double object
 my_wts <- as.double(my_wt_ls)
-``` 
+```
 
 Now we're ready to make predictions with our hand-selected weights.
 
-``` {r}
+
+```r
 # Get predictions
 predict_probabilities(data_file_a, my_wts)
+#>        UR        SR Freq Constraint1 Constraint2 Predicted Probability
+#> 1: Input1 Output1-1    1           1           0            0.73105858
+#> 2: Input1 Output1-2    1           0           1            0.26894142
+#> 3: Input2 Output2-1    1           0           0            0.92414182
+#> 4: Input2 Output2-2    0           0           1            0.07585818
+#>    Observed Probability       Error
+#> 1:                  0.5  0.23105858
+#> 2:                  0.5 -0.23105858
+#> 3:                  1.0 -0.07585818
+#> 4:                  0.0  0.07585818
 ```
 
 
@@ -1081,7 +1350,8 @@ In the example below, we use the following optional arguments to save the predic
 * `out_sep`: specifies delimiter
   + Defaults to tabs `"\t"`
 
-``` {r}
+
+```r
 # Save predicted result to file
 # predict_probabilities(
 #   data_file_a, my_wts,
@@ -1116,7 +1386,8 @@ For example, if a particular UR has two SRs, higher values of $T$ will move the 
 
 We'll use the hand-picked weights `my_wts` to illustrate this effect.
 First, we get predictions when $T=1$, $T=3$, and $T=5$, and store the results in the objects `t1_pred`, `t3_pred`, and `t5_pred` respectively.
-``` {r}
+
+```r
 # Get paths to toy data file
 data_file_c <- system.file(
    "extdata", "sample_data_file_2.txt", package="maxent.ot"
@@ -1135,13 +1406,21 @@ t5_pred <- predict_probabilities(data_file_c, my_wts, temperature=5)
 
 Next, we'll construct a data frame to easily compare the prediction probabilities across the different temperatures.
 Notice that we can extract the predicted probabilities like so:
-``` {r}
+
+```r
 # View predicted probability of t1_pred
 t1_pred[, 'Predicted Probability']
+#>    Predicted Probability
+#> 1:            0.73105858
+#> 2:            0.26894142
+#> 3:            0.76615721
+#> 4:            0.06289001
+#> 5:            0.17095278
 ```
 
 Now we'll create the data frame: 
-```{r}
+
+```r
 # Select columns we want, and store them in lettered variables
 a <- t1_pred[, 'UR']
 b <- t1_pred[, 'SR']
@@ -1157,23 +1436,22 @@ names(temperature_df) <- c('UR', 'SR', 'T=1', 'T=3', 'T=5')
 
 # View the data frame
 temperature_df
+#>       UR        SR        T=1       T=3       T=5
+#> 1 Input1 Output1-1 0.73105858 0.5825702 0.5498340
+#> 2 Input1 Output1-2 0.26894142 0.4174298 0.4501660
+#> 3 Input2 Output2-1 0.76615721 0.4899250 0.4260125
+#> 4 Input2 Output2-2 0.06289001 0.2129205 0.2583897
+#> 5 Input2 Output2-3 0.17095278 0.2971545 0.3155978
 ```
 
 We'll track the predicted probabilities of the outputs of *Input1*:
 
-```{r echo=FALSE}
-# Create matrix with 3 columns
-tab <- matrix(c(73, 27, 58, 42, 55, 45), ncol=2, byrow=TRUE)
 
-# Define column names and row names of matrix
-colnames(tab) <- c('Output1-1 (%)', 'Output1-2 (%)')
-rownames(tab) <- c('T=1', 'T=3', 'T-5')
-
-# Convert matrix to table 
-tab <- as.table(tab)
-
-# View table 
-tab
+```
+#>     Output1-1 (%) Output1-2 (%)
+#> T=1            73            27
+#> T=3            58            42
+#> T-5            55            45
 ```
 
 Thus, as temperature increases, we see that the predicted distributions over the outputs of a given input become less polarized.
@@ -1182,37 +1460,7 @@ Since there are two outputs here, the value that these predicted probabilities m
 If there were three outputs (as with *Input2*), the value that these predicted probabilities move towards would be $1/3 = 0.333$.
 The graphs below visualize the depolarization of the probability distribution over outputs as temperature increases.
 
-``` {r, echo=FALSE}
-# Create separate data frames for Input1 and Input2
-ur1_df <- temperature_df[1:2, 3:5]
-ur2_df <- temperature_df[3:5, 3:5]
-
-# Plot distribution of outputs for Input1
-par(mar=c(5, 4, 4, 4), xpd=TRUE)
-barplot(as.matrix(ur1_df),
-        main = "Input 1",
-        xlab = "Temperature",
-        ylab = "% output",
-        axes = TRUE,
-        legend.text = c("Out1-1", "Out1-2"), 
-        args.legend = list(x = "topright",
-                           inset = c(-0.55, 0),    # Move legend outside plot
-                           cex = .7)               # Legend font size
-        )
-
-# Plot distribution of outputs for Input2
-par(mar=c(5, 4, 4, 4), xpd=TRUE)
-barplot(as.matrix(ur2_df),
-        main = "Input 2",
-        xlab = "Temperature",
-        ylab = "% output",
-        axes = TRUE,
-        legend.text = c("Out2-1", "Out2-2", "Out2-3"), 
-        args.legend = list(x = "topright",
-                           inset = c(-0.55, 0),
-                           cex = .7)
-        )
-```
+![](C:/Users/Adeline/AppData/Local/Temp/Rtmp0sXwcw/preview-4744167712e9.dir/maxent-ot_vignette_files/figure-html/unnamed-chunk-41-1.png)<!-- -->![](C:/Users/Adeline/AppData/Local/Temp/Rtmp0sXwcw/preview-4744167712e9.dir/maxent-ot_vignette_files/figure-html/unnamed-chunk-41-2.png)<!-- -->
 
 
 ## 5.3 Using temperature: Experimental data from "2 alternative forced choice" tasks
@@ -1316,7 +1564,8 @@ We will utilize the `predict_probabilities()` function to generate the probabili
   + To capture the depolarization effect for 2AFC tasks, we need $T>1$
   + Following HZSL, we'll specifically use $T=1.5$. See HZSL (2009) for details on why they chose this value.
 
-``` {r}
+
+```r
 # Get paths to sample Hungarian wug data
 hu_data <- system.file(
   "extdata", "sample_hu_wug.txt", package = "maxent.ot"
@@ -1346,13 +1595,21 @@ hu_pred <- predict_probabilities(
 
 Let's take a look at some of the predicted wug probabilities produced by *Grammar L*:
 
-``` {r}
+
+```r
 # Let's view some of the predicted probabilities at T=1.5
 # We've dropped the constraint violations for easier viewing
 # Both predicted and observed probability are conditioned over URs
 # e.g. Observed probability in rows 3 & 4 don't sum to 1 
 # because the stem [étt] appears twice in this data set.
 head(hu_pred[, -4:-(ncol(hu_pred)-3)])
+#>          UR          SR Freq Predicted Probability Observed Probability Error
+#> 1: Szólingy Szólingynak    1            0.78807041                  1.0     0
+#> 2: Szólingy Szólingynek    0            0.21192959                  0.0     0
+#> 3:      étt      éttnak    0            0.01860365                  0.0     1
+#> 4:      étt      éttnek    1            0.48139635                  0.5     0
+#> 5: Csazenip Csazenipnak    0            0.13470305                  0.0     0
+#> 6: Csazenip Csazenipnek    1            0.86529695                  1.0     0
 
 # For curiosity's sake, let's compare:
 # With default temperature=1...
@@ -1361,6 +1618,13 @@ hu_pred_t1 <- predict_probabilities(
   hu_data, lex_wts, encoding = "UTF-8"
 )
 head(hu_pred_t1[, -4:-(ncol(hu_pred_t1)-3)])
+#>          UR          SR Freq Predicted Probability Observed Probability Error
+#> 1: Szólingy Szólingynak    1           0.877611113                  1.0     0
+#> 2: Szólingy Szólingynek    0           0.122388887                  0.0     0
+#> 3:      étt      éttnak    0           0.003769867                  0.0     1
+#> 4:      étt      éttnek    1           0.496230133                  0.5     0
+#> 5: Csazenip Csazenipnak    0           0.057866955                  0.0     0
+#> 6: Csazenip Csazenipnek    1           0.942133045                  1.0     0
 ```
 
 ### 5.3.5 Monte-carlo simulations based on the predicted probabilities above
@@ -1379,7 +1643,8 @@ That is, each row represents an instance of *Grammar S*.
 
 The following code was used to produce the 500 simulated complete wug test responses and train their corresponding grammars (*Grammar S*'s):
 
-``` {r}
+
+```r
 # Learn weights for 500 simulated wug tests
 # monte_carlo_weights(hu_pred, 500)
 ```
@@ -1387,7 +1652,8 @@ The following code was used to produce the 500 simulated complete wug test respo
 Each complete wug test consisted of 1703 trials, so the process took a very long time to run. 
 To save time, we saved the 500 sets of constraint weights (500 *Grammar S*'s) and present them below:
 
-``` {r}
+
+```r
 # Get path to the saved constraint weights trained on the 500 simulated wug tests
 hu_500simul_wts_path <- system.file(
   "extdata", "hu_500simuls_wts.txt", package = "maxent.ot"
@@ -1409,6 +1675,34 @@ names(hu_500simul_wts) <- c(
 # View the first 6 rows of hu_500simul_wts
 # i.e. the first 6 Grammar S's
 head(hu_500simul_wts)
+#>   AGREE(back,nonlocal) AGREE(front,local) AGREE(nonhigh_front,local)
+#> 1             3.383119          1.0876934                  0.9360368
+#> 2             3.444765          0.9890333                  0.8731836
+#> 3             3.588559          1.1637950                  0.8753390
+#> 4             3.323187          1.1766615                  0.8087822
+#> 5             3.509050          0.9975359                  0.9905781
+#> 6             3.394041          0.5826657                  1.2360608
+#>   AGREE(low_front,local) AGREE(double_front,local) USE_FRONT/bilabial__
+#> 1               1.838278                  2.624190             1.593205
+#> 2               2.107615                  2.506750             1.703648
+#> 3               2.180713                  3.195825             1.874271
+#> 4               2.085677                  2.435280             1.824118
+#> 5               1.919777                  2.912883             1.605194
+#> 6               1.818039                  2.976685             1.635315
+#>   USE_FRONT/[+cor,+son]__ USE_FRONT/sibilant__ USE_FRONT/CC__
+#> 1               0.6393167            0.7599629       0.966830
+#> 2               0.6472897            0.8210698       1.216772
+#> 3               0.2137989            0.4346787       1.244254
+#> 4               0.3060865            0.6178177       1.099641
+#> 5               0.7514726            0.7526335       1.074058
+#> 6               1.1377657            0.8029462       1.302554
+#>   USE_BACK/[C0i:C0]__
+#> 1           1.4764315
+#> 2           2.1874098
+#> 3           0.8430519
+#> 4           2.2069378
+#> 5           1.8524475
+#> 6           1.6132052
 ```
 
 **Some housekeeping**
@@ -1422,7 +1716,8 @@ The caution against duplicate UR entries highlighted in &sect;4.1 doesn't apply 
 The process took a long time to run so we performed only 500 (rather than 10,000) simulations.
 The Reader is invited to uncomment the code below if they would like to try running the `monte_carlo_weights()` function. 
 
-``` {r, eval=FALSE}
+
+```r
 # Learn weights for 5 simulated wug tests
 # hu_simul_wts <- monte_carlo_weights(hu_pred, 5)
 ```
@@ -1433,14 +1728,16 @@ Now that we have a distribution of idealized constraint weights for each of the 
 
 First, we'll have to fit a model to the human wug responses (*i.e.* produce *Grammar W*):
 
-``` {r}
+
+```r
 # Fit model for human wug response
 human_wug_model <- optimize_weights(hu_data)
 ```
 
 Let's view the constraint weights of *Grammar W* in relation to the average idealized weights from the 500 *Grammar S*'s:
 
-``` {r}
+
+```r
 # Weights trained on human wug response
 human_wt <- human_wug_model$weights
 
@@ -1459,7 +1756,8 @@ For example, USE_FRONT/bilabial__ has a lower weight when trained on human wug r
 
 The plots below visualize where the weights trained on human wug tests (blue vertical dashed line) fall in relation to the distribution of the weights trained on the simulated idealized wug tests (histogram).
 
-``` {r, echo=FALSE}
+
+```r
 library(ggplot2)
 
 # Plot weights for the five unnatural constraints by looping through them
@@ -1525,7 +1823,8 @@ Here, we have two data sets `small_data` & `large_data` (thus meeting the first 
 `large_data` has the very same constraints (C1 & C3) that `small_data` has, plus an additional constraint, C2.
 Thus, the nested criterion is met.
 
-``` {r}
+
+```r
 # Get paths to toy data files
 # This file has two constraints
 small_data <- system.file(
@@ -1538,14 +1837,29 @@ large_data <- system.file(
 
 # View small_data
 read.table(small_data, header=FALSE, sep='\t')
+#>       V1        V2 V3          V4          V5
+#> 1                  NA Constraint1 Constraint3
+#> 2                  NA          C1          C3
+#> 3 Input1 Output1-1  1           1           1
+#> 4        Output1-2  1           0           0
+#> 5 Input2 Output2-1  1           0           1
+#> 6        Output2-2  0           0           0
 
 # View large_data
 read.table(large_data, header=FALSE, sep='\t')
+#>       V1        V2 V3          V4          V5          V6
+#> 1                  NA Constraint1 Constraint2 Constraint3
+#> 2                  NA          C1          C2          C3
+#> 3 Input1 Output1-1  1           1           0           1
+#> 4        Output1-2  1           0           1           0
+#> 5 Input2 Output2-1  1           0           0           1
+#> 6        Output2-2  0           0           1           0
 ```
 
 We'll train both models and store the trained models in the objects `small_model` & `large_model`:
 
-``` {r}
+
+```r
 # Fit weights to both data sets
 small_model <- optimize_weights(small_data)
 large_model <- optimize_weights(large_data)
@@ -1560,9 +1874,12 @@ To use the `lrt` method of `compare_models()`, we'll need three arguments:
 
 The models can appear in either order, but they must both appear before the `method` argument.
 
-``` {r}
+
+```r
 # Compare models using the likelihood ratio test
 compare_models(small_model, large_model, method='lrt')
+#>                                     description   chi_sq k_delta   p_value
+#> 1 sample_data_file_large~sample_data_file_small 1.386294       1 0.7609681
 ```
 
 This method returns a data frame with a single row and the following columns:
@@ -1607,7 +1924,8 @@ We introduce a new data set, large_data_b, which has constraints C1, C2 & C4.
 The program is unable to perform the likelihood ratio test, and produces an error message.
 (Actually, this is a problem in the vignette, because it won't even knit to html when errors are produced. So I've set `eval=FALSE` for now.)
 
-``` {r eval=FALSE}
+
+```r
 # Get paths to toy data files
 # This file has three constraints
 large_data_b <- system.file(
@@ -1664,9 +1982,13 @@ The data frame has the following columns:
   * `cum.wt`: The cumulative sum of AIC weights up to and including this model.
   * `ll`: The log likelihood of this model.
   
-``` {r}
+
+```r
 # Compare models using AIC
 compare_models(small_model, large_model, method='aic')
+#>                    model k      aic    aic.wt    cum.wt        ll
+#> 1 sample_data_file_small 2 8.158883 0.5761169 0.5761169 -2.079442
+#> 2 sample_data_file_large 3 8.772589 0.4238831 1.0000000 -1.386294
 ```
 
 In the data frame above, the small model has an AIC score of 8.16 while the large model has an AIC score of 8.77. 
@@ -1686,9 +2008,10 @@ where $\delta_i$ is the difference in AIC score between model $i$ and the best m
 We'll break this equation down further, and walk through its application step-by-step.
 The values of the intermediate terms we'll use (*e.g.* $\delta$; the raw AIC weight, $r$) are shown in *Figure 5*. 
 
-```{r, echo=FALSE, fig.cap="Fig 5: Calculating AIC weights: Intermediate steps", out.width = '70%'}
-knitr::include_graphics("../man/figures/aicWeight_table.JPG")
-```
+<div class="figure">
+<img src="../man/figures/aicWeight_table.JPG" alt="Fig 5: Calculating AIC weights: Intermediate steps" width="70%" />
+<p class="caption">Fig 5: Calculating AIC weights: Intermediate steps</p>
+</div>
 
 
 #### 6.2.3.1 AIC score distance, $\delta$
@@ -1790,9 +2113,13 @@ Hence, to use the `bic` method of `compare_models()`, we'll need $m+1$ arguments
 
 The models can appear in any order, but they must all appear before the `method` argument.
 
-``` {r}
+
+```r
 # Compare models using BIC
 compare_models(small_model, large_model, method='bic')
+#>                    model k n      bic    bic.wt    cum.wt        ll
+#> 1 sample_data_file_large 3 3 6.068426 0.5358984 0.5358984 -1.386294
+#> 2 sample_data_file_small 2 3 6.356108 0.4641016 1.0000000 -2.079442
 ```
 
 The returned data frame from the BIC method has the same structure as that of the AIC, with one additional column:
@@ -1834,7 +2161,8 @@ Hence, to use the `bic` method of `compare_models()`, we'll need $m+1$ arguments
 
 The models can appear in any order, but they must all appear before the `method` argument.
 
-``` {r}
+
+```r
 # Get paths to toy data files
 # This file has 2 constraints
 small_data_c <- system.file(
@@ -1852,6 +2180,9 @@ large_model_c <- optimize_weights(large_data_c)
 
 # Compare models using AIC-C
 compare_models(small_model_c, large_model_c, method='aic_c')
+#>                      model k n     aicc    aicc.wt    cum.wt        ll
+#> 1 sample_data_file_small_c 2 6 16.31777 0.97375563 0.9737556 -4.158883
+#> 2 sample_data_file_large_c 3 6 23.54518 0.02624437 1.0000000 -2.772592
 ```
 
 The returned data frame from the AIC-C method has the same structure as that of the BIC.
@@ -1869,11 +2200,15 @@ When $n-k \leq 1$ for a particular model, the third term's denominator is 0.
 This results in an infinitely large AIC-C value.
 In the example below, this issue crops up for both the large and the small models.
 
-``` {r}
+
+```r
 # Problematic data set: all models have n-k <= 1
 
 # Compare models using AIC-C
 compare_models(small_model, large_model, method='aic_c')
+#>                    model k n      aicc aicc.wt cum.wt        ll
+#> 1 sample_data_file_large 3 3 -15.22741       1      1 -1.386294
+#> 2 sample_data_file_small 2 3       Inf       0      1 -2.079442
 ```
 In the data frame above, none of the models produce a valid AIC-C score.
 Hence the probability that one particular model is the best cannot be calculated (`aicc.wt` is `NaN` "Not a Number").
@@ -1881,24 +2216,40 @@ Hence the probability that one particular model is the best cannot be calculated
 One way to side-step this issue is to scale the sample size up. 
 For example, the problematic data sets had their sample sizes increased by a factor of 2 to create the non-problematic data sets:
 
-``` {r}
+
+```r
 # View problematic data set
 # sample size: n = 3
 # maximum number of constraints for valid aic_c score: 3-2 = 1
 # actual maximum number of constraints used: 3
 read.table(large_data, header=FALSE, sep='\t')
+#>       V1        V2 V3          V4          V5          V6
+#> 1                  NA Constraint1 Constraint2 Constraint3
+#> 2                  NA          C1          C2          C3
+#> 3 Input1 Output1-1  1           1           0           1
+#> 4        Output1-2  1           0           1           0
+#> 5 Input2 Output2-1  1           0           0           1
+#> 6        Output2-2  0           0           1           0
 
 # View non-problematic data set
 # sample size: n = 6
 # maximum number of constraints for valid aic_c score: 6-2 = 4
 # actual maximum number of constraints used: 3
 read.table(large_data_c, header=FALSE, sep='\t')
+#>       V1        V2 V3          V4          V5          V6
+#> 1                  NA Constraint1 Constraint2 Constraint3
+#> 2                  NA          C1          C2          C3
+#> 3 Input1 Output1-1  2           1           0           1
+#> 4        Output1-2  2           0           1           0
+#> 5 Input2 Output2-1  2           0           0           1
+#> 6        Output2-2  0           0           1           0
 ```
 
 In the case where only one (*i.e.* `large_model_d`) of multiple models produces an invalid AIC-C score, the model with the invalid AIC-C score will have an `aicc.wt` of 0.
 The `aicc.wt` for the other models with valid AIC-C scores will be calculated as per normal (see data frame below).
 
-``` {r}
+
+```r
 # 1 Problematic data set: large_data_d has n-k <= 1
 # 2 Non-problematic data sets
 
@@ -1926,4 +2277,8 @@ large_model_d <- optimize_weights(large_data_d)
 
 # Compare models using AIC-C
 compare_models(small_model_d, med_model_d, large_model_d, method='aic_c')
+#>                      model k n     aicc      aicc.wt    cum.wt        ll
+#> 1 sample_data_file_small_d 2 5 16.73012 9.999513e-01 0.9999513 -3.365058
+#> 2   sample_data_file_med_d 3 5 36.59167 4.865154e-05 1.0000000 -3.295837
+#> 3 sample_data_file_large_d 4 5      Inf 0.000000e+00 1.0000000 -3.295837
 ```
