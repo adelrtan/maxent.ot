@@ -222,7 +222,7 @@ Temperature is rarely used when modeling linguistic data, so the current simplif
 We will introduce the final formulation of the probability distribution in &sect;5 when we discuss the `temperature` argument of the `predict_probabilities()` function. It turns out that temperature can be a useful tool in **adjusting model fit to particular psycholinguistic tasks**.
 
 An additional feature of the MaxEnt model arises from how the penalty score is calculated.
-Because each violation contributes to the penalty score, multiple violations of a lower-weighted constraint can work together to make an SR less probable than another SR that has only one violation of a higher-wighted constraint.
+Because each violation contributes to the penalty score, multiple violations of a lower-weighted constraint can work together to make an SR less probable than another SR that has only one violation of a higher-weighted constraint.
 This phenomenon is called the **"gang-up" effect**.
 This effect has been observed in phonological phenomena, and has also been reported experimentally (Breiss 2020). 
 
@@ -236,6 +236,7 @@ Take a look at the data set below, loaded from the `sample_data_file` data set i
 ```{r}
 # Get paths to sample data file
 data_file <- system.file(
+  "extdata", "sample_data_file.txt", package = "maxent.ot"
 )
 
 # Take a look at the structure of the sample data
@@ -251,12 +252,12 @@ The columns are organized as follows:
 * Column 3: Frequency
   + Both token counts & relative frequency can be used for the function `optimize_weights`.
   + Token counts are recommended if the User intends to use the function `compare_models` down the line to compare multiple trained models. In particular, relative frequency won't work with the `aic_c` & `bic` methods of `compare_models`.
-* Column 4 onwards: Constraints
+* Column 4 onward: Constraints
   + Each constraint takes up one column. 
 
-The first & second rows are only used for Column 4 onwards (*i.e.* constraints).
+The first & second rows are only used for Column 4 onward (*i.e.* constraints).
 Full constraint names are in the first row, while their shortened names are in the second. 
-Tableaux are inserted from the third row onwards.
+Tableaux are inserted from the third row inwards.
 
 The data set is a tab-delimited `.txt` file.
 The Reader may notice that the input file is in fact prepared in an OTSoft-style format (Hayes, Tesar & Zuraw 2003).
@@ -278,10 +279,11 @@ simple_model
 
 The object `simple_model` has 4 relevant named attributes:
 
-  * `weights`: the trained weights for each constraint. This is a named list.
-  * `loglik`: the log likelihood of the data under the trained weights
-  * `k`: the number of constraints
-  * `n`: the number of data points in the training set
+* `weights`: the trained weights for each constraint. This is a named list.
+* `loglik`: the log likelihood of the data under the trained weights minus the value of the bias term
+  + If no biases are used, then this value is exactly the log likelihood of the data under the trained weights
+* `k`: the number of constraints
+* `n`: the number of data points in the training set
 
 ## 2.2.1 Retrieving specific model attributes 
 We can retrieve any specific model attribute that we'd like.   
@@ -335,6 +337,8 @@ We leave the discussion of $B(w)$ to &sect;3, where priors are introduced.
 
 ### 2.3.1 Defining log likelihood
 When no priors are used, maximizing the objective function $O(w)$ is equivalent to maximizing the log likelihood of training data $LL_w(D)$ alone.
+Since we've not used any priors so far, in all the preceding cases, the learner sought weights that maximized the log likelihood of training data.
+
 The log likelihood of the training data is:
 
 $$LL_w(D) = \Sigma_{i=1}^n ln P(y_i|x_i; w)$$
@@ -360,7 +364,7 @@ Recall that the learner takes in a distribution over training examples, $D$.
 For the data set we've been using, $D$ is: $<$Input1, Output1-1$>$: 1, $<$Input1, Output1-2$>$: 1, $<$Input2, Output2-1$>$: 1.  
 $<$Input2, Output2-2$>$ is not part of $D$ because it isn't observed.
 
-The learner's goal is to maximize the log likelihood of $D$.
+In the absence of priors, learner's sole goal is to maximize the log likelihood of $D$.
 In other words, the learner seeks to produce a distribution over these three training examples that matches the observed distribution as closely as possible. 
 The learner adjusts the weights with this goal in mind.
 
@@ -412,9 +416,6 @@ For example, we can imagine the learner starting with the weights that produce a
 With its goal of maximizing the log likelihood of training data, the learner moves to the weights of *M2*, and eventually arrives at the weights of *M1*, where training is halted and *M1*'s weights are the weights of the final trained model.
 
 
-%%TODO: It's been awkward calling the full formulation of the objective function (which also includes the bias in addition to LL) "log likelihood". Since really only the first term is the log likelihood. Do we want find a more accurate name for the term we're maximizing? Maybe "loss"? Or maybe just "objective function"? I've used the term cost elsewhere to describe the "cost" of picking certain constraint weights that differ from a preferred value if we've decided beforehand that this constraint's weight should be a particular preferred value, so maybe avoid "cost".
-
-
 ### 2.3.3 The learning algorithm
 %%TODO: Do we want to explain the learning algo? L-BFGS? Or is this an overkill? Maybe just some light hill-climbing without the L-BFGS (though the package actually implements L-BFGS-B)?
 
@@ -428,7 +429,7 @@ Here's the general formula for the objective function, $O(w)$, repeated here for
 
 $$O(w) = LL_w(D) - B(w)$$
 
-In the previous section (&sect;2), we ignored the second term, so objective function, $O(w)$, depended upon only the log likelihood of the training data under the current weights.
+In the previous section (&sect;2), we ignored the second term, so objective function, $O(w)$, depended solely upon the log likelihood of the training data under the current weights.
 In this section, we'll make use of the second term, $B(w)$.
 This term is also known by several names such as the "bias term", the "prior", and in special cases, the "regularization term".
 The bias term allows us to nudge the learner towards particular weights by introducing an added price to pay for weights that differ from the ones that the User specifies.
@@ -470,6 +471,8 @@ $$ \text{value to be subtracted} \propto (\frac{1}{\sigma_k})^2$$
 The choice of $\sigma$ depends on the sample size. 
 As the number of data points increases, $\sigma$ must decrease in order for the effect of the bias to remain constant.
 Specifically, $n\sigma^2$ must be held constant, where $n$ is the number of tokens.
+In addition, if $\sigma$ is too small, the trained weights may barely move from the specified ideal ones. 
+If the User notices that their models don't appear to have learned anything (*i.e.* the trained weights appear to be the same as the specified ideal weights), it is advisable to increase $\sigma$ (*i.e.* increase the tolerance for weight discrepancy), so that weights may differ from the ideal ones without incurring too great a price.
 
 
 ## 3.2 Using the prior: Which argument to use?
@@ -561,7 +564,7 @@ If only one of the two bias parameters is present, an error will be raised.
 ### 3.3.1 Ceiling log likelihood
 In &sect;2.2 we noted that the log likelihood attained by `simple_model` was in fact at ceiling.
 ``` {r}
-# Get log likelihood of simple model
+# Get log likelihood of simple model (no biases)
 simple_model$loglik
 ```
 
@@ -642,11 +645,61 @@ Notice that the weights for both constraints are now closer to 0 (*cf.* the unbi
 We attained this by including a prior term that tagged on a price to pay for weights whose value did not exactly match the ideal weight.
 In particular the price to be paid increased the further a constraint's weight was from the ideal weight $0$.
 
-Notice also that the log likelihood of the regularized model is below ceiling ($-2.000 < -1.386$).
+Notice also that the log likelihood of data under the weights of the regularized model is below the ceiling of $-1.386$ ($-1.945 < -1.386$):
 
-```{r biasModelLoglik}
-# Get log likelihood of model trained with scalar biases
+```{r}
+# Calculate log likelihood of regularized model trained with scalar biases
+
+# Use regularized model's weights to get predicted probabilities
+predict_regularizedModel <- predict_probabilities(
+  data_file, regularized_model$weights
+)
+
+# Retrieve just the predicted probabilities
+pred_probs_regM <- predict_regularizedModel[, 'Predicted Probability']
+
+# Calculate the actual log likelihood
+# Since only the first three data points are observed...
+# ...and each only occurs once...
+# ...this is a quick way to calculate log likelihood
+actual_logLike <- 0
+for (i in 1:3) {
+  actual_logLike = actual_logLike + log(as.numeric(pred_probs_regM[i]))
+}
+
+# The log likelihood is...
+print(
+  paste("The log likelihood of data under weights of regularized model is:", 
+        sprintf(actual_logLike, fmt = '%#.3f'))
+)
+```
+
+Be aware that since the regularized model uses the bias term, the objective function is no longer equivalent to the log likelihood.
+Both the log likelihood and the bias term now contribute to the objective function. 
+The bias term is the price to pay for having constraint weights that differ from the specified ideal weights.
+Since the trained weights (0.105 & 0.316) aren't at the ideal weights (0 & 0), the bias term must be larger than zero.
+So, we expect the value of the objective function to be smaller than the value of the log likelihood, since a price must be paid for these non-ideal weights.
+We can retrieve the value of the objective function like so:
+
+```{r biasModelObjFn}
+# Get value of objective function for trained regularized model 
 regularized_model$loglik
+```
+
+Note that `loglik` returns the value of the objective function $O(w)$ (rather than the log likelihood $LL_w(D)$), despite its name.
+
+We can also calculate the value of the bias term $B(w)$:
+
+\begin{align}
+O(w) &= LL_w(D) - B(w) \\
+B(w) &= LL_w(D) - O(w)
+\end{align}
+
+``` {r}
+# Calculate value of the bias term for trained regularized model
+bias_term <- actual_logLike - regularized_model$loglik
+
+bias_term
 ```
 
 **Retrieving the weight of 1 constraint**
@@ -915,10 +968,11 @@ The resulting trained biased model was able to match the observed frequencies of
 # 4 Making predictions: `predict_probabilities()`
 The function `predict_probabilities()` predicts the probabilities of SR candidates based on their violation profiles and the constraint weights.
 
-The function `predict_probabilities()` requires at the very least, the following two arguments:
+The function `predict_probabilities()` requires at the very least, the following two arguments in this order:
 
-(1) An input file identical to the one for `optimize_weights()`
-(2) Constraint weights
+(1) `test_file`: An input file
+    + Its structure must be identical to the input file for `optimize_weights()`
+(2) `constraint_weights`: Constraint weights which will be used to make predictions
 
 ## 4.1 Get predictions with trained weights
 Let's imagine that we want to make a prediction using the weights of a model that we've trained using `optimize_weights()`.
@@ -1016,6 +1070,27 @@ Now we're ready to make predictions with our hand-selected weights.
 predict_probabilities(data_file_a, my_wts)
 ```
 
+
+## 4.3 Save predictions to file
+The `predict_probabilities()` function provides the option of saving its returned object to a file.
+
+In the example below, we use the following optional arguments to save the predicted object:
+
+* `output_path`: path and file name
+  + By specifying `"C:\\path\\to\\dir\\your_file_name.txt"`, the result is saved to the file `your_file_name.txt`, which will be in the directory `C:\path\to\dir`.
+* `out_sep`: specifies delimiter
+  + Defaults to tabs `"\t"`
+
+``` {r}
+# Save predicted result to file
+# predict_probabilities(
+#   data_file_a, my_wts,
+#   output_path = "C:\\path\\to\\dir\\your_file_name.txt",
+#   out_sep = "\t"
+# )
+```
+
+
 # 5 The full MaxEnt model: With Temperature
 ## 5.1 The full MaxEnt model defined
 As promised, we now present the generalized version of the model with temperature included: 
@@ -1058,14 +1133,14 @@ t3_pred <- predict_probabilities(data_file_c, my_wts, temperature=3)
 t5_pred <- predict_probabilities(data_file_c, my_wts, temperature=5)
 ```
 
-Next, we'll construct a dataframe to easily compare the prediction probabilities across the different temperatures.
+Next, we'll construct a data frame to easily compare the prediction probabilities across the different temperatures.
 Notice that we can extract the predicted probabilities like so:
 ``` {r}
 # View predicted probability of t1_pred
 t1_pred[, 'Predicted Probability']
 ```
 
-Now we'll create the dataframe: 
+Now we'll create the data frame: 
 ```{r}
 # Select columns we want, and store them in lettered variables
 a <- t1_pred[, 'UR']
@@ -1074,13 +1149,13 @@ c <- t1_pred[, 'Predicted Probability']
 d <- t3_pred[, 'Predicted Probability']
 e <- t5_pred[, 'Predicted Probability']
 
-# Join variables to create dataframe
+# Join variables to create data frame
 temperature_df <- data.frame(a, b, c, d, e)
 
 # Rename columns
 names(temperature_df) <- c('UR', 'SR', 'T=1', 'T=3', 'T=5')
 
-# View the dataframe
+# View the data frame
 temperature_df
 ```
 
@@ -1150,11 +1225,11 @@ Why this effect occurs is still unclear.
 Possible explanations have been put forth such as: selecting a choice that one would not have otherwise volunteered being easier than volunteering said choice without being prompted.
 
 Regardless of why this occurs, being able to model depolarization is crucial when one wishes to ask questions that encompass both the lexicon and psycholinguistic experimental results. 
-In one such work, Hayes, Zuraw, Siptar & Londe (2009) (henceforth HZSL) asked whether certain types of constraints were under- or over-learned based on participant responses to a wug test, given the lexicon.
+In one such work, Hayes, Zuraw, Siptar & Londe (2009) (henceforth HZSL) asked whether certain types of constraints were under- or over-learned based on participant responses to a wug test, when compared to the lexicon.
 In what follows, we walk the Reader through a replication of HZSL (2009) to demonstrate how temperature can be utilized to make lexicon-based models and models trained on human subject responses comparable.
 
 ### 5.3.1 Hungarian backness harmony
-In Hungarian, the dative suffix has two allomorphs: [-nok] and [-nek].
+In Hungarian, the dative suffix has two allomorphs: [-nɔk] and [-nɛk].
 A front rounded vowel anywhere in the stem triggers the front allomorph.
 When the closest vowel is a back vowel, the back allomorph is triggered.
 However, if a back vowel is separated from the suffix by one or more neutral vowels, variation is observed.
@@ -1167,9 +1242,9 @@ Such patterns were deemed unnatural because (non-dorsal) consonants are generall
 Constraints associated with vowel-triggered harmony were deemed "natural" while those associated with consonant-triggered ones were deemed "unnatural".
 In addition, monosyllabic Ci:C stems take a back allomorph (historically, this was a back vowel), so the constraint USE_BACK/Ci:C__ was also considered unnatural.
 
-HZSL were interested in assessing whether the natural constraints governing the zones of variation and the unnatural constraints were under- or over-learned.
-They designed a wug test where Hungarian speakers were presented with a wug stem as well as the allomorphs [-nok] and [-nek].
-The speakers had to choose one of the two suffixes, so this was a 2AFC task.
+HZSL were interested in assessing whether the natural and unnatural constraints governing the zones of variation were under- or over-learned.
+They designed a wug test where Hungarian speakers were presented with a wug stem as well as the allomorphs [-nɔk] and [-nɛk].
+The speakers had to pick one of the two suffixes to go with the stem, so this was a 2AFC task.
 
 ### 5.3.2 Challenges with assessing under-/over-learning
 When one wishes to assess whether humans under- or over-learn certain constraints, it is natural to want to compare the lexicon-trained weights (*Grammar L*) directly to the wug-test-trained weights (*Grammar W*). 
@@ -1181,20 +1256,20 @@ However, such direct comparisons can be problematic for several reasons:
   + For example, HZSL found that in the lexicon, all stems whose final nucleus contained a back vowel (B-type stems) always picked a back suffix.
     - Lexicon model (*Grammar L*): Agree(back, local) has very high weight.
   + However, such stems were very uninteresting to HZSL, who were interested in obtaining wug results for stems in the zones of variation.
-  + HZSL excluded such B-type stems from their wug test
-    - Wug model (*Grammar W*): Agree(back, local) has extremely low weight
-    - because the learner never encountered any candidate that violated this constraint.
-(2) Even if all word types are included in the wug test, the proportions between the different types must be identical to that of the lexicon
-(3) Responses are depolarized if experimental task is 2AFC
+  + HZSL excluded such B-type stems from their wug test:
+    - Wug model (*Grammar W*): Agree(back, local) has extremely low weight, since the learner never encountered any candidate that violated this constraint.
+(2) Even if all word types are included in the wug test, the proportions between the different types must be identical to that of the lexicon in order for the wug & lexicon grammars to be comparable.
+(3) Human subject responses are depolarized if experimental task is 2AFC
 
 
 ### 5.3.3 A rigorous approach to assessing under-/over-learning
-Instead of comparing a constraint's weight in *Grammar L* to its weight in *Grammar W*, here's what HZSL did:
+Instead of directly comparing a constraint's weight in *Grammar L* to its weight in *Grammar W*, here's what HZSL did:
 
 (1) HSZL simulated a group of idealized Hungarian speakers who had learned the weights from the lexicon perfectly (*i.e.* they interact with the world using *Grammar L*).
-(2) This group of idealized Hungarian speakers then performed the very same wug test that the group of human subjects did, randomly picking the back or front suffix for each stem according to the weights in *Grammar L*.
+(2) This group of idealized Hungarian speakers then performed the very same wug test that the group of human subjects did, randomly picking the back or front suffix for each stem according to their grammar (*i.e.* the weights in *Grammar L*).
 (3) The simulated wug test result was then fit to produce a grammar, *Grammar S*.
   + Notice how this mirrored the human wug test results that were fit to produce the grammar, *Grammar W*.
+  + In other words, both *Grammar S* and *Grammar W* were trained on data sets that had the exact same types and proportion of stems.
 
 Comparing *Grammar S* to *Grammar W*:
 
@@ -1207,26 +1282,41 @@ Comparing *Grammar S* to *Grammar W*:
 
 A huge collection of *Grammar S*:
 
-* Since the stem types in the wug test were those in the zones of variation, that lone wug test performed by one group of idealized speakers might produce very different suffix choices than one performed by the human speakers due to chance alone. 
+* Since the stem types in the wug test were those in the zones of variation, that lone wug test performed by one group of idealized speakers might produce very different suffix choices than the one performed by the human speakers due to chance alone. 
 * To mitigate this, HZSL ran 10,000 groups of simulated idealized speakers.
 * For each constraint *C*, they now had a distribution of its expected idealized weight (from 10,000 *Grammar S*'s)
 * This approach, estimating the value of a variable via random sampling, is called the Monte Carlo method.
 * If constraint *C*'s weight from *Grammar W* fell in the left tail of the idealized *C* distribution, they interpreted this to mean that *C* was under-learned.
 * If constraint *C*'s weight from *Grammar W* fell in the right tail of the idealized *C* distribution, then *C* was over-learned.
 
+Let's take stock of where we are.
+In &sect;5.3.2, we saw that there were three challenges to directly comparing the lexicon and wug grammars.
+Simulating idealized speakers performing the same wug task as human speakers solved the first two issues.
+The third issue, simulating depolarized 2AFC wug responses, will be taken up in the next section (&sect;5.3.4), where the hyperparameter `temperature` will be used to effect depolarization.
 
-### 5.3.4 Generating predictions for a 2AFC task
-For each stem, the simulated speaker picks one suffix option according to the probability distribution over the suffixes.
-For example, if the probability of the back suffix is 90% and the probability of the front suffix is 10%, then 9 out of 10 times, the simulated speaker will pick the back suffix.
 
-To generate the probability distribution over the suffixes of a given stem, we will utilize the `predict_probabilities()` function.
+### 5.3.4 Generating depolarized predictions for a 2AFC task
+How would a simulated speaker go about picking a suffix for a wug stem?
+For each stem, the simulated speaker's grammar (*i.e.* *Grammar L*) generates a probability distribution over the two suffix options.
+This probability distribution guides the simulated speaker's suffix choice.
+For example, if the probability distribution is: 
 
-* We'll feed in the Hungarian wug test data, since we want to get the predicted probabilities of the suffixed wug stems.
-* Since these idealized speakers have learned the lexicon perfectly, we'll use the weights that were learned by training on the lexicon, `lex_wts`.
-* We'll set $T>1$ to capture the depolarization effect for 2AFC tasks. 
-  + Following HZSL, we'll specifically use $T=1.5$. See HZSL (2009) for more detail on why they chose this value.
+* back suffix: 90% 
+* front suffix: 10%
 
-``` {r, eval=FALSE}
+then 9 out of 10 times, the simulated speaker will pick the back suffix.
+
+We will utilize the `predict_probabilities()` function to generate the probability distribution over the two suffix options of a given stem:
+
+* `test_file`: Hungarian wug test data
+  + Since we want to get the predicted probabilities over the suffix options of the various wug stems.
+* `constraint_weights`: *Grammar L* 
+  + Since these idealized speakers have learned the lexicon perfectly, we'll use the weights that were learned by training on the lexicon.
+* `temparature`: `T=1.5`
+  + To capture the depolarization effect for 2AFC tasks, we need $T>1$
+  + Following HZSL, we'll specifically use $T=1.5$. See HZSL (2009) for details on why they chose this value.
+
+``` {r}
 # Get paths to sample Hungarian wug data
 hu_data <- system.file(
   "extdata", "sample_hu_wug.txt", package = "maxent.ot"
@@ -1244,7 +1334,7 @@ names(lex_wts_ls) <- list(
   'USE_FRONT/CC__',	'USE_BACK/[C0i:C0]__'
 )
 
-# Convert to double object (required type as argument of predict_probabilites())
+# Convert to double object (required type as argument of predict_probabilities())
 lex_wts <- as.double(lex_wts_ls)
 
 # Predict probabilities with temperature set to 1.5
@@ -1252,14 +1342,19 @@ lex_wts <- as.double(lex_wts_ls)
 hu_pred <- predict_probabilities(
   hu_data, lex_wts, temperature = 1.5, encoding = "UTF-8"
 )
+```
 
-# Let's view some of the predicted probabilities
+Let's take a look at some of the predicted wug probabilities produced by *Grammar L*:
+
+``` {r}
+# Let's view some of the predicted probabilities at T=1.5
 # We've dropped the constraint violations for easier viewing
 # Both predicted and observed probability are conditioned over URs
 # e.g. Observed probability in rows 3 & 4 don't sum to 1 
 # because the stem [étt] appears twice in this data set.
 head(hu_pred[, -4:-(ncol(hu_pred)-3)])
 
+# For curiosity's sake, let's compare:
 # With default temperature=1...
 # ... predicted probability is more polarized
 hu_pred_t1 <- predict_probabilities(
@@ -1269,19 +1364,31 @@ head(hu_pred_t1[, -4:-(ncol(hu_pred_t1)-3)])
 ```
 
 ### 5.3.5 Monte-carlo simulations based on the predicted probabilities above
-Next, we perform 500 simulated wug tests by using the function `monte_carlo_weights()`.
-This function only requires two arguments: the prediction object `hu_pred`, and the number of simulations.
+We've used *Grammar L* to generate predicted probabilities for wug suffixes at $T=1.5$, and stored the probability distributions in the object `hu_pred`.
+Next, we use these probability distributions to guide our simulated subjects as they pick suffixes for wug stems.
+
+We use the function `monte_carlo_weights()` to simulate 500 groups of idealized Hungarian speakers picking suffixes for the wug stems.
+This function only requires two arguments: the prediction object (we use `hu_pred`), and the number of simulations.
 
 This function produces a complete wug test response by randomly choosing one suffix option for each trial in `hu_pred` based on the the predicted probabilities in `hu_pred`.
 (This function automatically converts predicted P(SR|UR) in `hu_pred` to predicted P(SR|trial).)
-It then calls `optimize_weights()` to fit this simulated wug response, and records the weights learned.
+It then calls `optimize_weights()` to fit this simulated wug response (*i.e.* to produce *Grammar S*), and records the weights learned.
 It repeats this process for the specified number of simulations.
-It returns a dataframe with $m$ rows and $n$ columns, where $m$ is the number of simulations and $n$ is the number of constraints.
+It returns a data frame with $m$ rows and $n$ columns, where $m$ is the number of simulations and $n$ is the number of constraints.
+That is, each row represents an instance of *Grammar S*.
 
-We present the constraint weights obtained by fitting each of the 500 simulated wug test below.
+The following code was used to produce the 500 simulated complete wug test responses and train their corresponding grammars (*Grammar S*'s):
 
-``` {r, eval=FALSE}
-# Get path to the constraint weights trained on each of the 500 simulated wug tests
+``` {r}
+# Learn weights for 500 simulated wug tests
+# monte_carlo_weights(hu_pred, 500)
+```
+
+Each complete wug test consisted of 1703 trials, so the process took a very long time to run. 
+To save time, we saved the 500 sets of constraint weights (500 *Grammar S*'s) and present them below:
+
+``` {r}
+# Get path to the saved constraint weights trained on the 500 simulated wug tests
 hu_500simul_wts_path <- system.file(
   "extdata", "hu_500simuls_wts.txt", package = "maxent.ot"
 )
@@ -1300,8 +1407,17 @@ names(hu_500simul_wts) <- c(
 )
 
 # View the first 6 rows of hu_500simul_wts
+# i.e. the first 6 Grammar S's
 head(hu_500simul_wts)
 ```
+
+**Some housekeeping**
+
+Notice that duplicate UR entries are present in the prediction object `hu_pred`.
+This is because the set-up of the `monte_carlo_weights()` function crucially depends upon predicted P(SR|trial) in order to randomly give one SR in each trial a frequency of 1.
+Consecutive rows are considered to belong to the same trial if they have the same UR, but not a repeated SR.
+When creating your prediction object, it is important to ensure that trials are not collapsed into a single entry.
+The caution against duplicate UR entries highlighted in &sect;4.1 doesn't apply here because the `Error` column of the `hu_pred` file isn't used by `monte_carlo_weights()`.
 
 The process took a long time to run so we performed only 500 (rather than 10,000) simulations.
 The Reader is invited to uncomment the code below if they would like to try running the `monte_carlo_weights()` function. 
@@ -1311,35 +1427,37 @@ The Reader is invited to uncomment the code below if they would like to try runn
 # hu_simul_wts <- monte_carlo_weights(hu_pred, 5)
 ```
 
-Notice that duplicate UR entries are present in the prediction object `hu_pred`.
-This is because the set-up of the `monte_carlo_weights()` function crucially depends upon predicted P(SR|trial) in order to randomly give one SR in each trial a frequency of 1.
-Consecutive rows are considered to belong to the same trial if they have the same UR, but not a repeated SR.
-When creating your prediction object, it is important to ensure that trials are not collapsed into a single entry.
-The caution against duplicate UR entries highlighted in &sect;4.1 doesn't apply here because the `Error` column of the `hu_pred` file isn't used by `monte_carlo_weights()`. 
 
 ### 5.3.6 Are unnatural constraints under-learned?
-Now that we have a distribution of expected constraint weights for each of the 10 constraints, let's find out whether the weights trained on human wug responses were under-, over-, or perfectly learned.
+Now that we have a distribution of idealized constraint weights for each of the 10 constraints (from 500 *Grammar S*'s), let's find out whether the weights trained on human wug responses (*Grammar W*) were under-, over-, or perfectly learned.
+
+First, we'll have to fit a model to the human wug responses (*i.e.* produce *Grammar W*):
 
 ``` {r, eval=FALSE}
 # Fit model for human wug response
 human_wug_model <- optimize_weights(hu_data)
+```
 
+Let's view the constraint weights of *Grammar W* in relation to the average idealized weights from the 500 *Grammar S*'s:
+
+``` {r, eval=FALSE}
 # Weights trained on human wug response
 human_wt <- human_wug_model$weights
+
 # Average idealized wug weights
 ideal_wt <- colMeans(hu_500simul_wts)
 
-# Create dataframe
+# Create data frame
 wt_df <- data.frame(human_wt, ideal_wt)
 
 # View weights trained on human wug responses & average idealized wug weights
 print(wt_df, digits = 3)
 ```
 
-All unnatural constraints (those beginning with USE...) appear to be under-learned by human learners.
-For example, USE_FRONT/bilabial__ has a lower weight when trained on human wug responses (1.04) than the average of the weights obtained by training on simulated wug responses (1.63).
+All unnatural constraints (those beginning with USE...) appear to be under-learned by humans.
+For example, USE_FRONT/bilabial__ has a lower weight when trained on human wug responses (1.04) than the average of the weights obtained by training on simulated idealized wug responses (1.63).
 
-The plots below visualize where the human wug trained weights (blue vertical dashed line) fall in relation to the distribution of the simulated idealized wug trained weights (histogram).
+The plots below visualize where the weights trained on human wug tests (blue vertical dashed line) fall in relation to the distribution of the weights trained on the simulated idealized wug tests (histogram).
 
 ``` {r, eval=FALSE}
 library(ggplot2)
@@ -1367,10 +1485,10 @@ for (i in 6:10) {
 
 # 6 Comparing models: `compare_models()`
 Let's imagine that we've trained multiple models, perhaps one with 3 constraints & another with 2 constraints.
-The larger model has more parameters to play with, and so usually fits the data better.
+The larger model has more constraints to play with, and so usually fits the data better.
 If our only criterion to determine the best model was to assess only model fit to training data, larger models would generally do better.
 
-Nevertheless, we can still ask whether including additional parameters is worth the better fit. 
+Nevertheless, we can still ask whether including additional constraints is worth the better fit. 
 For example, if including one additional constraint, improves model fit drastically, the inclusion of this constraint is probably justified.
 However, if the inclusion of this constraint only improves model fit by a minuscule amount, we'd be better off removing this constraint from our model.
 
@@ -1404,7 +1522,7 @@ First, exactly two models must be compared.
 Second, these models must be nested.
 
 Here, we have two data sets `small_data` & `large_data` (thus meeting the first criterion). 
-`large_data` has the very same constraints (C1 & C2) that `small_data` has, plus an additional constraint, C3.
+`large_data` has the very same constraints (C1 & C3) that `small_data` has, plus an additional constraint, C2.
 Thus, the nested criterion is met.
 
 ``` {r}
@@ -1418,60 +1536,46 @@ large_data <- system.file(
   "extdata", "sample_data_file_large.txt", package = "maxent.ot"
 )
 
-# Display the datasets as tables
+# View small_data
 read.table(small_data, header=FALSE, sep='\t')
 
+# View large_data
 read.table(large_data, header=FALSE, sep='\t')
 ```
 
-We'll train both models, and perform the likelihood ratio test:
+We'll train both models and store the trained models in the objects `small_model` & `large_model`:
 
 ``` {r}
 # Fit weights to both data sets
 small_model <- optimize_weights(small_data)
 large_model <- optimize_weights(large_data)
+```
 
+Now we'll perform the likelihood ratio test on the two trained models.
+To use the `lrt` method of `compare_models()`, we'll need three arguments:
+
+(1) object storing results of first model
+(2) object storing results of second model
+(3) `method = 'lrt'`
+
+The models can appear in either order, but they must both appear before the `method` argument.
+
+``` {r}
 # Compare models using the likelihood ratio test
 compare_models(small_model, large_model, method='lrt')
 ```
 
-``` {r include = FALSE}
-# To remove: here for troubleshooting
+This method returns a data frame with a single row and the following columns:
 
-# The b files increase all observed forms from 1 to 5. 
-# The resulting chi-sq val should make this significant 
-# ERROR: makes the p-value worse, possibly an issue with code?
-# The real p-value is  .00847, for a chi-sqVal=6.931471	& df=1.
-
-# Get paths to toy data files
-small_data_b_old <- system.file(
-  "extdata", "sample_data_file_small_b_old.txt", package = "maxent.ot"
-)
-large_data_b_old <- system.file(
-  "extdata", "sample_data_file_large_b_old.txt", package = "maxent.ot"
-)
-
-# Fit weights to both data sets
-small_model_b_old <- optimize_weights(small_data_b_old)
-large_model_b_old <- optimize_weights(large_data_b_old)
-
-# Likelihood ratio test
-compare_models(small_model_b_old, large_model_b_old, method='lrt')
-```
-
-
-
-This produces a dataframe with a single row and the following columns:
-
-* `description`: The names of the two models being compared, with the larger model first.
+* `description`: The names of the two models being compared, with the larger model appearing first.
 * `chi_sq`: chi-squared value. 
-* `k_delta`: degrees of freedom (difference in number of constraints).
+* `k_delta`: degrees of freedom (difference in the number of constraints between the two model).
 * `p-value`: p-value.
 
-The p-value was $0.239$.
+The *p*-value was $0.239$.
 This indicates that the difference in model fit to data was not significant at the $.05$ significance level.
 Hence, we are not justified in including the additional constraint, C2.
-The model with fewer parameters is the better one.
+The model with fewer constraints is the better one.
 
 ### 6.1.2 Likelihood ratio test: Explained
 The likelihood ratio, $LR$, is calculated as follows:
@@ -1483,14 +1587,45 @@ where $LL_2$ is the log likelihood of the larger model (the one with more constr
 The likelihood ratio $LR$ is set as the $X^2$-value, which is used to perform a $X^2$-test.
 The $X^2$-value should range between 0 & positive infinity, with a larger value indicating a greater improvement in model fit.
 The difference in the number of constraints is set as the degrees of freedom.
-The p-value tells us whether the difference in likelihood between the two models is significant.
+The *p*-value tells us whether the difference in likelihood between the two models is significant.
 If it turns out to be significant, then we are justified in including the additional constraints in order to achieve the better model fit.
 
 This test runs on the assumption that the larger model indeed produces a better fit to the data. 
 If this criterion isn't met, there is no way in which the larger model is better than the smaller one since
-(1) the larger model does worse on  model fit and (2) even with more constraints, it couldn't fit the data better than the smaller model.
+
+(1) the larger model does worse on  model fit, and 
+(2) even with more constraints, the larger model couldn't fit the data better than the smaller model
+
 Mathematically, this translates to having a negative $X^2$-value, which is uninterpretable.
 An error message will be produced and no $X^2$-test will be performed if such a scenario is encountered.
+
+
+### 6.1.3 Likelihood ratio won't work for non-nested models
+We'll attempt to perform a likelihood ratio test on two non-nested models.
+We re-use small_data, which has constraints C1 & C3.
+We introduce a new data set, large_data_b, which has constraints C1, C2 & C4.
+The program is unable to perform the likelihood ratio test, and produces an error message.
+(Actually, this is a problem in the vignette, because it won't even knit to html when errors are produced. So I've set `eval=FALSE` for now.)
+
+``` {r eval=FALSE}
+# Get paths to toy data files
+# This file has three constraints
+large_data_b <- system.file(
+  "extdata", "sample_data_file_large_b.txt", package = "maxent.ot"
+)
+
+# View small_data
+read.table(small_data, header=FALSE, sep='\t')
+
+# View large_data_b
+read.table(large_data_b, header=FALSE, sep='\t')
+
+# Fit weights to data set large_data_b 
+large_model_b <- optimize_weights(large_data_b)
+
+# Compare models using the likelihood ratio test
+compare_models(small_model, large_model_b, method='lrt')
+```
 
 
 ## 6.2 Akaike Information Criterion (AIC)
@@ -1501,17 +1636,29 @@ $$AIC = 2k - 2LL$$
 where $k$ is the number of constraints, and $LL$ is the log likelihood of the current model.
 
 A smaller AIC score indicates a better model.
-Both the number of model parameters and log likelihood contribute to the AIC score. 
-All else being equal, having a smaller number of model parameters or having a higher log likelihood is indicative of a better model. 
-Recall that log likelihood ($-\infty < LL < 0$) quantifies model fit.
+Both the number of constraints and log likelihood contribute to the AIC score. 
+All else being equal, having a smaller number of constraints or having a higher log likelihood is indicative of a better model. 
+Recall that log likelihood ($-\infty < LL \leq 0$) quantifies model fit.
 
+
+### 6.2.2 Compare models using the AIC method
 Two or more models may be passed to `compare_models()` when using the `aic` method. 
+To use the `aic` method of `compare_models()`, we'll need $m+1$ arguments, where $m$ is the number of models that we want compared.
+
+* First argument: object storing results of first model
+* Second argument: object storing results of second model
+* ...
+* $m^{th}$ argument: object storing results of $m^{th}$ model 
+* $(m+1)^{th}$ argument: `method = 'aic'`
+
+The models can appear in any order, but they must all appear before the `method` argument.
+
 The returned data frame contains the same number of rows as models passed in.
 The models are sorted in increasing order of AIC (*i.e.* best first). 
 The data frame has the following columns:
 
   * `model`: The name of the model.
-  * `k`: The number of parameters.
+  * `k`: The number of constraints.
   * `aic`: The model's AIC score.
   * `aic.wt`: The model's AIC weight: This reflects the relative likelihood (or conditional probability) that this model is the "best" model in the set.
   * `cum.wt`: The cumulative sum of AIC weights up to and including this model.
@@ -1525,34 +1672,123 @@ compare_models(small_model, large_model, method='aic')
 In the data frame above, the small model has an AIC score of 8.16 while the large model has an AIC score of 8.77. 
 This indicates that the small model is better.
 
-### 6.2.2 AIC weight (`aic.wt`) explained 
 How much better is the small model compared to the large model?
 The column `aic.wt` gives the probability that the current model is the best one of the entire set of models passed in.
+So the small model has a 57.6% chance of being the best model, and the large model has a 43.7% chance of being the best model. 
 
-In order to calcualte the `aic.wt` for a model, each model's AIC score has to be converted to a raw AIC weight, $r$. 
-The `aic.wt` for a current model, $w_{aic}$, is just its raw AIC weight normalized over the sum of raw AIC weights of all other models that were passed in to be compared. 
 
-$$w_{aic} = \frac{r}{\sum_{r \in R} r}$$
+### 6.2.3 AIC weight (`aic.wt`) explained 
+The AIC weight of a model is calculated by applying the softmax function to the negative halved-distance between current model's AIC score and the AIC score of the best model:
 
-where $R$ is the set of all raw AIC weights of the models passed in to `compare_models()`.
+$$W_i = \frac{exp(-0.5\delta_i)}{\Sigma_{j=1}^m exp(-0.5\delta_j)}$$
+where $\delta_i$ is the difference in AIC score between model $i$ and the best model, and $m$ is the number of models being compared.
 
-The raw AIC weight, $r$, is calculated as follows.
+We'll break this equation down further, and walk through its application step-by-step.
+The values of the intermediate terms we'll use (*e.g.* $\delta$; the raw AIC weight, $r$) are shown in *Figure 5*. 
 
-$$r = e^{(-\delta/2)}$$
+```{r, echo=FALSE, fig.cap="Fig 5: Calculating AIC weights: Intermediate steps", out.width = '70%'}
+knitr::include_graphics("../man/figures/aicWeight_table.JPG")
+```
 
-where $k$ is the number of parameters, $n$ is the sample size, and $LL$ is the log likelihood of the current model.
+
+#### 6.2.3.1 AIC score distance, $\delta$
+
+First, we'll calculate the difference in AIC score between model $i$ and the best model, $\delta_i$:
+
+$$\delta_i = aic_i - aic_{best}$$
+where $aic_i$ is the AIC score of the $i^{th}$ model, and $aic_{best}$ is the AIC score of the best model.
+
+Let's calculate the AIC score distance for the large model, $\delta_{large\_model}$:
+
+\begin{align}
+\delta_{large\_model} &= aic_{large\_model} - aic_{best\_model} \\
+&= aic_{large\_model} - aic_{small\_model} \\
+&= 8.773 - 8.159 \\
+&= 0.614
+\end{align}
+
+and for the small model, $\delta_{small\_model}$:
+
+\begin{align}
+\delta_{small\_model} &= aic_{small\_model} - aic_{best\_model} \\
+&= aic_{small\_model} - aic_{small\_model} \\
+&= 8.773 - 8.773 \\
+&= 0
+\end{align}
+
+
+#### 6.2.3.2 Raw AIC weight, $r$
+
+Next, we'll define the raw AIC weight:
+
+$$r_i = e^{(-\delta_i/2)}$$
+where $r_i$ is the raw AIC weight of model $i$.
+
+Let's calculate the raw AIC weight for the large model:
+
+\begin{align}
+r_{large\_model} &= e^{-\delta_{large\_model}/2} \\
+&= e^{-0.614/2} \\
+&= 0.736
+\end{align}
+
+Notice that $\delta = 0$ for the best model, and $\delta \gt 0$ for the rest of the models.
+This results in the best model's raw AIC weight $r$ being $e^0 = 1$, and the worse models receiving a raw AIC weight less than $1$.
+
+
+#### 6.2.3.3 Actual AIC weight: `aic.wt`
+
+Next, we'll perform normalization to get the actual AIC weights shown in the `aic.wt` column.
+The true AIC weight for the $i^{th}$ model, $W_i$, is just its raw AIC weight, $r_i$, divided by the sum of raw AIC weights of all models that were passed in to be compared: 
+
+$$W_i= \frac{r_i}{\sum_j^m r_j}$$
+
+where $m$ is the number of models passed in to `compare_models()`, and $r_j$ is the raw AIC weight of the $j^{th}$ such model.
+
+Applying this equation, the AIC weight of the large model is:
+\begin{align}
+W_{large\_model} &= \frac{r_{large\_model}}{\sum_j^2 r_j} \\
+&= \frac{0.736}{1 + 0.736} \\ 
+&= 0.424
+\end{align}
+
+
+## 6.3 Bayesian Information Criterion (BIC)
+### 6.3.1 BIC: Background
+
+The BIC is an alternative measure of assessing the trade-off between the number of constraints and model fit.
+The BIC replaces the AIC's first term ($2k$) with $k \ln(n)$. 
+
+$$BIC = k \ln(n) - 2 LL$$
+
+where $k$ is the number of constraints, $n$ is the sample size, and $LL$ is the log likelihood of the current model.
 
 As with the AIC, a smaller BIC score indicates a better model. 
 
-For both the AIC and the BIC, the first term penalizes models that have more parameters, $k$. 
-However, the number of parameters, $k$, is scaled differently in these two measures.
+For both the AIC and the BIC, the first term penalizes models that have more constraints, $k$. 
+However, the number of constraints, $k$, is scaled differently in these two measures.
 For the BIC, $k$ is scaled by $\ln(n)$, where $n$ is the number of samples.
-As the number of observed tokens increases, the penalty accrued by models that have more parameters increases (albeit at a decreasing rate since $k$ is scaled by $\ln(n)$ rather than $n$). 
-In contrast, the AIC scales $k$ with the constant $2$, so sample size has no effect on the penalty accrued by having more parameters, $k$. 
+As the number of observed tokens increases, the penalty accrued by models that have more constraints increases (albeit at a decreasing rate since $k$ is scaled by $\ln(n)$ rather than $n$). 
+In contrast, the AIC scales $k$ with the constant $2$, so sample size has no effect on the penalty accrued by having more constraints, $k$. 
 At $7$ observed tokens and below, a model's BIC score is smaller than its AIC score. 
 At $8$ observed tokens and above, a model's BIC score is larger than its AIC score (since $\ln(7) < 2 < \ln(8)$).
 
-A caveat: Though unlikely to occur, it is advisable to check that the sample size is greater than $1$. At a sample size of $1$, the effect of the number of parameters, $k$, on the BIC score is canceled out. The BIC score becomes directly proportional to the log likelihood alone ($BIC = k \ln(1) -2LL = -2LL$).
+A caveat: Though unlikely to occur, it is advisable to check that the sample size is greater than $1$. At a sample size of $1$, the effect of the number of constraints, $k$, on the BIC score is canceled out. The BIC score becomes directly proportional to the log likelihood alone ($BIC = k \ln(1) -2LL = -2LL$).
+
+
+### 6.3.2 Compare models using the BIC method
+As with the AIC, two or more models may be passed to `compare_models()` when using the `bic` method. 
+The arguments passed in to `compare_models` for the `bic` method are identical to that for the `aic` method, except that the method argument should now be: `method='bic'`.
+
+Hence, to use the `bic` method of `compare_models()`, we'll need $m+1$ arguments, where $m$ is the number of models that we want compared.
+
+* First argument: object storing results of first model
+* Second argument: object storing results of second model
+* ...
+* $m^{th}$ argument: object storing results of $m^{th}$ model 
+* $(m+1)^{th}$ argument: `method = 'bic'`
+
+The models can appear in any order, but they must all appear before the `method` argument.
 
 ``` {r}
 # Compare models using BIC
@@ -1572,16 +1808,31 @@ The conditional probability that the small model is the best of all models passe
 ## 6.4 Akaike Information Criterion corrected for small sample size (AIC-C)
 ### 6.4.1 AIC-C: Background
 
-The Akaike Information Criterion for small sample sizes (AIC-C) yet another alternative method of comparing the trade-off between the number of parameters and the model fit. 
-Like the BIC, AIC-C also takes sample size into account.
+The Akaike Information Criterion for small sample sizes (AIC-C) yet another alternative method of comparing the trade-off between the number of constraints and the model fit. 
+Like the BIC, AIC-C also takes the sample size into account.
 
 The AIC-C modifies the AIC by introducing a third term. 
 
 $$AIC_c = 2k - 2 LL + \frac{2k^2 + 2k}{n-k-1}$$
 
-As before, *k* is the number of parameters, *n* is the sample size, and *LL* is the log likelihood of the current model.
-This newly introduced third term further increases the cost of having additional parameters.
-As *n* approaches infinity, the third term's denominator approaches 0, so the AIC-C becomes equivalent to the AIC for large sample sizes. 
+As before, $k$ is the number of constraints, $n$ is the sample size, and $LL$ is the log likelihood of the current model.
+This newly introduced third term further increases the cost of having additional constraints.
+As $n$ approaches infinity, the third term's denominator approaches 0, so the AIC-C becomes equivalent to the AIC for large sample sizes. 
+
+
+### 6.4.2 Compare models using the AIC-C method
+As with the AIC and the BIC, two or more models may be passed to `compare_models()` when using the `aic_c` method. 
+The arguments passed in to `compare_models` for the `aic_c` method are identical to that for the `aic` and `bic` methods, except that the method argument should now be: `method='aic_c'`.
+
+Hence, to use the `bic` method of `compare_models()`, we'll need $m+1$ arguments, where $m$ is the number of models that we want compared.
+
+* First argument: object storing results of first model
+* Second argument: object storing results of second model
+* ...
+* $m^{th}$ argument: object storing results of $m^{th}$ model 
+* $(m+1)^{th}$ argument: `method = 'aic_c'`
+
+The models can appear in any order, but they must all appear before the `method` argument.
 
 ``` {r}
 # Get paths to toy data files
@@ -1604,16 +1855,19 @@ compare_models(small_model_c, large_model_c, method='aic_c')
 ```
 
 The returned data frame from the AIC-C method has the same structure as that of the BIC.
-The `aicc` and `aicc.wt` columns are the AIC-C counterparts to the `bic` and `bic.wt` columns in the BIC data frame respectively.
+The `aicc` and `aicc.wt` columns are the AIC-C counterparts to the `aic` and `aic.wt` columns in the AIC data frame respectively.
 
-In the data frame above, the small model (has smaller AIC-C score) performs better than the large model (has larger AIC-C score). 
+In the data frame above, the small model (smaller AIC-C score) performs better than the large model (larger AIC-C score). 
 The conditional probability that the small model is the best of all the models that were passed to `compare_models()` is $97.4%$.
 
-### 6.4.2 A potential pitfall
-When $n-k \le 1$ for a particular model, its AIC-C value is infinitely large.
-In the example below, this is true of both the large and the small models.
-One way to side-step this issue is to scale the sample size up. 
-For example, the problematic data set below had its sample size increased by a factor of 2 to create the non-problematic data set above.
+### 6.4.3 A potential pitfall
+Here's the formula for AIC-C again:
+
+$$AIC_c = 2k - 2 LL + \frac{2k^2 + 2k}{n-k-1}$$
+
+When $n-k \leq 1$ for a particular model, the third term's denominator is 0.
+This results in an infinitely large AIC-C value.
+In the example below, this issue crops up for both the large and the small models.
 
 ``` {r}
 # Problematic data set: all models have n-k <= 1
@@ -1621,35 +1875,55 @@ For example, the problematic data set below had its sample size increased by a f
 # Compare models using AIC-C
 compare_models(small_model, large_model, method='aic_c')
 ```
-
 In the data frame above, none of the models produce a valid AIC-C score.
-Hence the probability that one particular model is the best cannot be calculated (`aicc.wt` is NaN).
+Hence the probability that one particular model is the best cannot be calculated (`aicc.wt` is `NaN` "Not a Number").
 
-In the case where only one of multiple models produces an invalid AIC-C score, the model with the invalid AIC-C score will have an `aicc.wt` of 0.
+One way to side-step this issue is to scale the sample size up. 
+For example, the problematic data sets had their sample sizes increased by a factor of 2 to create the non-problematic data sets:
+
+``` {r}
+# View problematic data set
+# sample size: n = 3
+# maximum number of constraints for valid aic_c score: 3-2 = 1
+# actual maximum number of constraints used: 3
+read.table(large_data, header=FALSE, sep='\t')
+
+# View non-problematic data set
+# sample size: n = 6
+# maximum number of constraints for valid aic_c score: 6-2 = 4
+# actual maximum number of constraints used: 3
+read.table(large_data_c, header=FALSE, sep='\t')
+```
+
+In the case where only one (*i.e.* `large_model_d`) of multiple models produces an invalid AIC-C score, the model with the invalid AIC-C score will have an `aicc.wt` of 0.
 The `aicc.wt` for the other models with valid AIC-C scores will be calculated as per normal (see data frame below).
 
 ``` {r}
-# Problematic data set: one model has n-k <= 1
+# 1 Problematic data set: large_data_d has n-k <= 1
+# 2 Non-problematic data sets
+
+# sample size: n = 5
+# maximum number of constraints for valid aic_c score: 5-2 = 3
 
 # Get paths to toy data files
-# This file has 2 constraints
-small_data_b <- system.file(
-  "extdata", "sample_data_file_small_b.txt", package = "maxent.ot"
+# This file has 2 constraints: Good
+small_data_d <- system.file(
+  "extdata", "sample_data_file_small_d.txt", package = "maxent.ot"
 )
-# This file has 3 constraints
-med_data_b <- system.file(
-  "extdata", "sample_data_file_med_b.txt", package = "maxent.ot"
+# This file has 3 constraints: Good
+med_data_d <- system.file(
+  "extdata", "sample_data_file_med_d.txt", package = "maxent.ot"
 )
-# This file has 4 constraints
-large_data_b <- system.file(
-  "extdata", "sample_data_file_large_b.txt", package = "maxent.ot"
+# This file has 4 constraints: Problematic
+large_data_d <- system.file(
+  "extdata", "sample_data_file_large_d.txt", package = "maxent.ot"
 )
 
 # Fit weights for all data sets 
-small_model_b <- optimize_weights(small_data_b)
-med_model_b <- optimize_weights(med_data_b)
-large_model_b <- optimize_weights(large_data_b)
+small_model_d <- optimize_weights(small_data_d)
+med_model_d <- optimize_weights(med_data_d)
+large_model_d <- optimize_weights(large_data_d)
 
 # Compare models using AIC-C
-compare_models(small_model_b, med_model_b, large_model_b, method='aic_c')
+compare_models(small_model_d, med_model_d, large_model_d, method='aic_c')
 ```
